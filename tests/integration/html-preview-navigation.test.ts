@@ -45,7 +45,7 @@ async function navigateSandbox(network: boolean, protectedHost = true) {
       let stderr = ''
       child.stdout.on('data', chunk => { output += chunk })
       child.stderr.on('data', chunk => { stderr = `${stderr}${chunk}`.slice(-4_000) })
-      const timeout = setTimeout(() => { child.kill('SIGKILL'); reject(new Error(`Chrome navigation check timed out: ${stderr}`)) }, 40_000)
+      const timeout = setTimeout(() => { child.kill('SIGKILL'); reject(new Error(`Chrome navigation check timed out: ${stderr}`)) }, 30_000)
       child.once('error', error => { clearTimeout(timeout); reject(error) })
       child.once('exit', (code, signal) => {
         clearTimeout(timeout)
