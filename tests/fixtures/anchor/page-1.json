@@ -1,0 +1,1391 @@
+{
+ "page": 1,
+ "items": [
+  {
+   "str": "Provided proper attribution is provided, Google hereby grants permission to",
+   "transform": [
+    11.9552,
+    0,
+    0,
+    11.9552,
+    124.666,
+    710.037
+   ],
+   "width": 362.6729472,
+   "height": 11.9552,
+   "hasEOL": true
+  },
+  {
+   "str": "reproduce the tables and figures in this paper solely for use in journalistic or",
+   "transform": [
+    11.9552,
+    0,
+    0,
+    11.9552,
+    124.313,
+    696.09
+   ],
+   "width": 363.58154240000016,
+   "height": 11.9552,
+   "hasEOL": true
+  },
+  {
+   "str": "scholarly works.",
+   "transform": [
+    11.9552,
+    0,
+    0,
+    11.9552,
+    267.594,
+    682.142
+   ],
+   "width": 78.90432000000003,
+   "height": 11.9552,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    17.2154,
+    0,
+    0,
+    17.2154,
+    211.488,
+    629.957
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "Attention Is All You Need",
+   "transform": [
+    17.2154,
+    0,
+    0,
+    17.2154,
+    211.488,
+    629.957
+   ],
+   "width": 188.4053376000001,
+   "height": 17.2154,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    132.908,
+    549.305
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "Ashish Vaswani",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    132.908,
+    549.305
+   ],
+   "width": 66.89885899999999,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "∗",
+   "transform": [
+    6.9738,
+    0,
+    0,
+    6.9738,
+    199.807,
+    552.92
+   ],
+   "width": 4.08176514,
+   "height": 6.9738,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    139.379,
+    538.396
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "Google Brain",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    139.379,
+    538.396
+   ],
+   "width": 53.95744159999999,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    116.68099999999998,
+    527.487
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "avaswani@google.com",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    116.68099999999998,
+    527.487
+   ],
+   "width": 99.35800605999998,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    239.06199999999998,
+    549.305
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "Noam Shazeer",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    239.06199999999998,
+    549.305
+   ],
+   "width": 61.698381800000014,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "∗",
+   "transform": [
+    6.9738,
+    0,
+    0,
+    6.9738,
+    300.76,
+    552.92
+   ],
+   "width": 4.08176514,
+   "height": 6.9738,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    242.932,
+    538.396
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "Google Brain",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    242.932,
+    538.396
+   ],
+   "width": 53.95744160000002,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    230.69199999999998,
+    527.487
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "noam@google.com",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    230.69199999999998,
+    527.487
+   ],
+   "width": 78.44053109999999,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    338.692,
+    549.305
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "Niki Parmar",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    338.692,
+    549.305
+   ],
+   "width": 53.857815600000016,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "∗",
+   "transform": [
+    6.9738,
+    0,
+    0,
+    6.9738,
+    392.549,
+    552.92
+   ],
+   "width": 4.08176514,
+   "height": 6.9738,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    331.45399999999995,
+    538.396
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "Google Research",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    331.45399999999995,
+    538.396
+   ],
+   "width": 68.33347340000002,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    323.787,
+    527.487
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "nikip@google.com",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    323.787,
+    527.487
+   ],
+   "width": 83.66989983999999,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    424.29999999999995,
+    549.305
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "Jakob Uszkoreit",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    424.29999999999995,
+    549.305
+   ],
+   "width": 68.83160340000009,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "∗",
+   "transform": [
+    6.9738,
+    0,
+    0,
+    6.9738,
+    493.131,
+    552.92
+   ],
+   "width": 4.08176514,
+   "height": 6.9738,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    424.549,
+    538.396
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "Google Research",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    424.549,
+    538.396
+   ],
+   "width": 68.33347340000002,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    422.11199999999997,
+    527.487
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "usz@google.com",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    422.11199999999997,
+    527.487
+   ],
+   "width": 73.21116235999999,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    144.29199999999997,
+    499.308
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "Llion Jones",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    144.29199999999997,
+    499.308
+   ],
+   "width": 48.84662779999999,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "∗",
+   "transform": [
+    6.9738,
+    0,
+    0,
+    6.9738,
+    193.13799999999998,
+    502.923
+   ],
+   "width": 4.08176514,
+   "height": 6.9738,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    134.54799999999997,
+    488.399
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "Google Research",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    134.54799999999997,
+    488.399
+   ],
+   "width": 68.33347339999999,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    126.88199999999998,
+    477.489
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "llion@google.com",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    126.88199999999998,
+    477.489
+   ],
+   "width": 83.66989983999999,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    248.76099999999997,
+    499.308
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "Aidan N. Gomez",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    248.76099999999997,
+    499.308
+   ],
+   "width": 70.56509580000004,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "∗ †",
+   "transform": [
+    6.9738,
+    0,
+    0,
+    6.9738,
+    319.32599999999996,
+    502.923
+   ],
+   "width": 10.963510980000008,
+   "height": 6.9738,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    244.57499999999996,
+    488.399
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "University of Toronto",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    244.57499999999996,
+    488.399
+   ],
+   "width": 86.24622820000009,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    235.40699999999995,
+    477.489
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "aidan@cs.toronto.edu",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    235.40699999999995,
+    477.489
+   ],
+   "width": 104.58737479999998,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    394.12499999999994,
+    499.308
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "Łukasz Kaiser",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    394.12499999999994,
+    499.308
+   ],
+   "width": 61.71830700000001,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "∗",
+   "transform": [
+    6.9738,
+    0,
+    0,
+    6.9738,
+    455.8419999999999,
+    502.923
+   ],
+   "width": 4.08176514,
+   "height": 6.9738,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    398.00499999999994,
+    488.399
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "Google Brain",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    398.00499999999994,
+    488.399
+   ],
+   "width": 53.95744160000002,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    364.84899999999993,
+    477.49
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "lukaszkaiser@google.com",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    364.84899999999993,
+    477.49
+   ],
+   "width": 120.26551841999998,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    268.8069999999999,
+    449.31
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "Illia Polosukhin",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    268.8069999999999,
+    449.31
+   ],
+   "width": 67.07818580000003,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "∗ ‡",
+   "transform": [
+    6.9738,
+    0,
+    0,
+    6.9738,
+    335.8839999999999,
+    452.926
+   ],
+   "width": 10.963510980000008,
+   "height": 6.9738,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    238.0219999999999,
+    438.401
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "illia.polosukhin@gmail.com",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    238.0219999999999,
+    438.401
+   ],
+   "width": 135.95362464,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    11.9552,
+    0,
+    0,
+    11.9552,
+    283.7579999999999,
+    397.219
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "Abstract",
+   "transform": [
+    11.9552,
+    0,
+    0,
+    11.9552,
+    283.7579999999999,
+    397.219
+   ],
+   "width": 44.4852992,
+   "height": 11.9552,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    143.557,
+    371.035
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "The dominant sequence transduction models are based on complex recurrent or",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    143.557,
+    371.035
+   ],
+   "width": 324.7423043640002,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "convolutional neural networks that include an encoder and a decoder. The best",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    143.866,
+    360.126
+   ],
+   "width": 324.2646973200001,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "performing models also connect the encoder and decoder through an attention",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    143.866,
+    349.217
+   ],
+   "width": 324.26469732000004,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "mechanism. We propose a new simple network architecture, the Transformer,",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    143.866,
+    338.308
+   ],
+   "width": 325.5146051160002,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "based solely on attention mechanisms, dispensing with recurrence and convolutions",
+   "transform": [
+    9.763348,
+    0,
+    0,
+    9.9626,
+    143.866,
+    327.399
+   ],
+   "width": 324.2700771239999,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "entirely.",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    143.866,
+    316.49
+   ],
+   "width": 32.934562332000006,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": " ",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    176.800562332,
+    316.49
+   ],
+   "width": 6.007447800000002,
+   "height": 0,
+   "hasEOL": false
+  },
+  {
+   "str": "Experiments on two machine translation tasks show these models to",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    182.928159088,
+    316.49
+   ],
+   "width": 285.20253823199994,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "be superior in quality while being more parallelizable and requiring significantly",
+   "transform": [
+    10.0821512,
+    0,
+    0,
+    9.9626,
+    143.866,
+    305.581
+   ],
+   "width": 324.6150221863998,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "less time to train. Our model achieves 28.4 BLEU on the WMT 2014 English-",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    143.866,
+    294.672
+   ],
+   "width": 325.9210791959997,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "to-German translation task, improving over the existing best results, including",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    143.866,
+    283.762
+   ],
+   "width": 324.26469732,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "ensembles, by over 2 BLEU. On the WMT 2014 English-to-French translation task,",
+   "transform": [
+    9.763348,
+    0,
+    0,
+    9.9626,
+    143.866,
+    272.853
+   ],
+   "width": 325.51002231999985,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "our model establishes a new single-model state-of-the-art BLEU score of 41.8 after",
+   "transform": [
+    9.763348,
+    0,
+    0,
+    9.9626,
+    143.866,
+    261.944
+   ],
+   "width": 324.43605404000004,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "training for 3.5 days on eight GPUs, a small fraction of the training costs of the",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    143.866,
+    251.035
+   ],
+   "width": 324.26469732,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "best models from the literature. We show that the Transformer generalizes well to",
+   "transform": [
+    9.9227496,
+    0,
+    0,
+    9.9626,
+    143.866,
+    240.126
+   ],
+   "width": 324.26553417839995,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "other tasks by applying it successfully to English constituency parsing both with",
+   "transform": [
+    10.112039,
+    0,
+    0,
+    9.9626,
+    143.866,
+    229.217
+   ],
+   "width": 324.27286665199995,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "large and limited training data.",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    143.866,
+    218.308
+   ],
+   "width": 122.4005036,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    5.9776,
+    0,
+    0,
+    5.9776,
+    119.822,
+    189.954
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "∗",
+   "transform": [
+    5.9776,
+    0,
+    0,
+    5.9776,
+    119.822,
+    189.954
+   ],
+   "width": 3.8190886399999995,
+   "height": 5.9776,
+   "hasEOL": false
+  },
+  {
+   "str": "Equal contribution. Listing order is random. Jakob proposed replacing RNNs with self-attention and started",
+   "transform": [
+    8.7960384,
+    0,
+    0,
+    8.9664,
+    124.14,
+    186.145
+   ],
+   "width": 379.8569183039999,
+   "height": 8.9664,
+   "hasEOL": true
+  },
+  {
+   "str": "the effort to evaluate this idea. Ashish, with Illia, designed and implemented the first Transformer models and",
+   "transform": [
+    9.0381312,
+    0,
+    0,
+    8.9664,
+    108,
+    176.183
+   ],
+   "width": 395.99668039679966,
+   "height": 8.9664,
+   "hasEOL": true
+  },
+  {
+   "str": "has been crucially involved in every aspect of this work. Noam proposed scaled dot-product attention, multi-head",
+   "transform": [
+    8.787072,
+    0,
+    0,
+    8.9664,
+    108,
+    166.22
+   ],
+   "width": 395.99818675200004,
+   "height": 8.9664,
+   "hasEOL": true
+  },
+  {
+   "str": "attention and the parameter-free position representation and became the other person involved in nearly every",
+   "transform": [
+    9.0650304,
+    0,
+    0,
+    8.9664,
+    108,
+    156.257
+   ],
+   "width": 396.3140640576004,
+   "height": 8.9664,
+   "hasEOL": true
+  },
+  {
+   "str": "detail. Niki designed, implemented, tuned and evaluated countless model variants in our original codebase and",
+   "transform": [
+    8.9484672,
+    0,
+    0,
+    8.9664,
+    108,
+    146.295
+   ],
+   "width": 395.99651900159984,
+   "height": 8.9664,
+   "hasEOL": true
+  },
+  {
+   "str": "tensor2tensor. Llion also experimented with novel model variants, was responsible for our initial codebase, and",
+   "transform": [
+    8.8946688,
+    0,
+    0,
+    8.9664,
+    108,
+    136.332
+   ],
+   "width": 395.9995496448,
+   "height": 8.9664,
+   "hasEOL": true
+  },
+  {
+   "str": "efficient inference and visualizations. Lukasz and Aidan spent countless long days designing various parts of and",
+   "transform": [
+    8.787072,
+    0,
+    0,
+    8.9664,
+    108,
+    126.369
+   ],
+   "width": 395.9981867520001,
+   "height": 8.9664,
+   "hasEOL": true
+  },
+  {
+   "str": "implementing tensor2tensor, replacing our earlier codebase, greatly improving results and massively accelerating",
+   "transform": [
+    8.787072,
+    0,
+    0,
+    8.9664,
+    108,
+    116.407
+   ],
+   "width": 395.99818675199987,
+   "height": 8.9664,
+   "hasEOL": true
+  },
+  {
+   "str": "our research.",
+   "transform": [
+    8.9664,
+    0,
+    0,
+    8.9664,
+    108,
+    106.444
+   ],
+   "width": 46.302489600000015,
+   "height": 8.9664,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    5.9776,
+    0,
+    0,
+    5.9776,
+    120.21000000000001,
+    99.304
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "†",
+   "transform": [
+    5.9776,
+    0,
+    0,
+    5.9776,
+    120.21000000000001,
+    99.304
+   ],
+   "width": 3.43174016,
+   "height": 5.9776,
+   "hasEOL": false
+  },
+  {
+   "str": "Work performed while at Google Brain.",
+   "transform": [
+    8.9664,
+    0,
+    0,
+    8.9664,
+    124.14000000000001,
+    95.495
+   ],
+   "width": 143.21134080000007,
+   "height": 8.9664,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    5.9776,
+    0,
+    0,
+    5.9776,
+    120.21000000000001,
+    88.355
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "‡",
+   "transform": [
+    5.9776,
+    0,
+    0,
+    5.9776,
+    120.21000000000001,
+    88.355
+   ],
+   "width": 3.43174016,
+   "height": 5.9776,
+   "hasEOL": false
+  },
+  {
+   "str": "Work performed while at Google Research.",
+   "transform": [
+    8.9664,
+    0,
+    0,
+    8.9664,
+    124.14000000000001,
+    84.546
+   ],
+   "width": 156.1498560000001,
+   "height": 8.9664,
+   "hasEOL": true
+  },
+  {
+   "str": "31st Conference on Neural Information Processing Systems (NIPS 2017), Long Beach, CA, USA.",
+   "transform": [
+    8.9664,
+    0,
+    0,
+    8.9664,
+    108.00000000000001,
+    52.123000000000005
+   ],
+   "width": 352.13742720000016,
+   "height": 8.9664,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    0,
+    20,
+    -20,
+    0,
+    32,
+    237
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "arXiv:1706.03762v7 [cs.CL] 2 Aug 2023",
+   "transform": [
+    0,
+    20,
+    -20,
+    0,
+    32,
+    237
+   ],
+   "width": 341.08,
+   "height": 20,
+   "hasEOL": false
+  }
+ ]
+}

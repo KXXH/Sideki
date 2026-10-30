@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <!-- generated from sandbox.src.html by scripts/gen-viz-sandbox.mjs; edit the template -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data: blob:; media-src data: blob:; form-action 'none'; base-uri 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sideki Visualization</title>
+  <style>
+    /* Host design layer. Every color comes from the theme tokens pushed by the
+       parent; no external fonts or images are loaded.
+
+       Utilities (canvas skill contract):
+         .card             surface + hairline border, 8px radius, 10px/12px padding
+         .viz-grid         auto-fit grid, 120px min column, 8px gap
+         .viz-row          one flex row, space-between, 8px gap
+         .viz-controls     single non-wrapping control row, 8px gap
+         .viz-field        label + control stack, 3px gap
+         .viz-stat         inset stat block
+         .viz-stat-label   11px muted label
+         .viz-stat-value   18px tabular value
+         .viz-badge        read-only pill (not a button)
+         .viz-legend       wrapped legend row, 11px
+         .viz-legend-swatch 8px rounded color chip
+         .viz-tile         bordered grid tile
+         .text-small       12px secondary size
+         .text-muted       muted color
+         .tabular-nums     tabular figures
+         .progress         6px track
+         .progress-bar     primary-colored fill
+         .table-responsive horizontal scroll wrapper for narrow panes
+         .nav-pills        inset segmented control
+         .nav-link         pill tab; .active or aria-selected marks the current one */
+    :root {
+      color-scheme: light;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      background: transparent;
+    }
+
+    body {
+      color: var(--seed-fg);
+      font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif);
+      font-size: 13px;
+      font-weight: 400;
+      line-height: 1.5;
+      overflow-wrap: break-word;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #viz-root {
+      display: flow-root;
+      min-width: 0;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      margin: 0 0 6px;
+      font-weight: 500;
+      line-height: 1.3;
+    }
+
+    h1 { font-size: 16px; }
+    h2 { font-size: 15px; }
+    h3 { font-size: 14px; }
+    h4,
+    h5,
+    h6 { font-size: 13px; }
+
+    p {
+      margin: 0 0 8px;
+    }
+
+    p:last-child {
+      margin-bottom: 0;
+    }
+
+    ul,
+    ol {
+      margin: 0 0 8px;
+      padding-left: 18px;
+    }
+
+    li + li {
+      margin-top: 2px;
+    }
+
+    figure {
+      margin: 0;
+    }
+
+    hr {
+      height: 0;
+      margin: 10px 0;
+      border: 0;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    a {
+      color: var(--seed-primary);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    strong,
+    b {
+      font-weight: 500;
+    }
+
+    small {
+      font-size: 11px;
+    }
+
+    sub,
+    sup {
+      font-size: 11px;
+      line-height: 0;
+    }
+
+    summary {
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    caption {
+      margin-bottom: 4px;
+      color: var(--seed-muted);
+      font-size: 11px;
+      text-align: left;
+    }
+
+    th,
+    td {
+      padding: 5px 8px;
+      border-bottom: 1px solid var(--border-subtle);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--seed-muted);
+      font-size: 11px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    code,
+    kbd,
+    samp,
+    pre {
+      font-family: var(--font-code, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+      font-size: 12px;
+    }
+
+    code {
+      overflow-wrap: anywhere;
+    }
+
+    pre {
+      margin: 0 0 8px;
+      padding: 8px 10px;
+      overflow-x: auto;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      background: var(--inset-bg);
+    }
+
+    pre code {
+      overflow-wrap: normal;
+    }
+
+    img,
+    svg,
+    video,
+    canvas {
+      max-width: 100%;
+      height: auto;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+      color: inherit;
+    }
+
+    button {
+      appearance: none;
+      min-height: 28px;
+      padding: 4px 10px;
+      border: 1px solid var(--border-standard);
+      border-radius: 6px;
+      background: var(--card-bg);
+      color: var(--seed-fg);
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.4;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: var(--fill-1);
+    }
+
+    button:active {
+      background: var(--fill-2);
+    }
+
+    button:disabled {
+      cursor: default;
+      opacity: 0.55;
+    }
+
+    input,
+    select,
+    textarea {
+      min-width: 0;
+      padding: 4px 8px;
+      border: 1px solid var(--border-standard);
+      border-radius: 6px;
+      background: var(--inset-bg);
+      color: var(--seed-fg);
+      font-size: 12px;
+    }
+
+    textarea {
+      min-height: 56px;
+      resize: vertical;
+    }
+
+    input[type='range'] {
+      padding: 0;
+      border: 0;
+      background: transparent;
+      accent-color: var(--seed-primary);
+    }
+
+    input[type='checkbox'],
+    input[type='radio'] {
+      padding: 0;
+      border: 0;
+      background: transparent;
+      accent-color: var(--seed-primary);
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: var(--seed-muted);
+    }
+
+    label {
+      font-size: 12px;
+    }
+
+    .card {
+      padding: 10px 12px;
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      background: var(--card-bg);
+    }
+
+    .card > :last-child {
+      margin-bottom: 0;
+    }
+
+    .viz-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+    }
+
+    .viz-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .viz-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+    }
+
+    .viz-controls > * {
+      flex: 0 0 auto;
+    }
+
+    .viz-field {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 0;
+    }
+
+    .viz-field > label,
+    .viz-field-label {
+      color: var(--seed-muted);
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+
+    .viz-field > input,
+    .viz-field > select,
+    .viz-field > textarea {
+      width: 100%;
+    }
+
+    .viz-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+      padding: 8px 10px;
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      background: var(--inset-bg);
+    }
+
+    .viz-stat-label {
+      color: var(--seed-muted);
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+
+    .viz-stat-value {
+      color: var(--seed-fg);
+      font-size: 18px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 500;
+      line-height: 1.25;
+    }
+
+    .viz-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 1px 6px;
+      border: 1px solid var(--border-subtle);
+      border-radius: 999px;
+      background: var(--fill-1);
+      color: var(--seed-muted);
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 1.5;
+      white-space: nowrap;
+      cursor: default;
+    }
+
+    .viz-legend {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px 12px;
+      color: var(--seed-muted);
+      font-size: 11px;
+    }
+
+    .viz-legend-swatch {
+      flex: none;
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+      background: var(--seed-muted);
+    }
+
+    .viz-tile {
+      padding: 8px 10px;
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      background: var(--card-bg);
+    }
+
+    .viz-tile:hover {
+      border-color: var(--border-standard);
+    }
+
+    .text-small {
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .text-muted {
+      color: var(--seed-muted);
+    }
+
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .progress {
+      width: 100%;
+      height: 6px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: var(--fill-2);
+    }
+
+    .progress-bar {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--seed-primary);
+      transition: width 0.25s ease;
+    }
+
+    .table-responsive {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+    }
+
+    .table-responsive > table {
+      min-width: 100%;
+    }
+
+    .nav-pills {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      max-width: 100%;
+      padding: 2px;
+      overflow-x: auto;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      background: var(--inset-bg);
+    }
+
+    .nav-link {
+      appearance: none;
+      flex: none;
+      padding: 3px 8px;
+      border: 0;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--seed-muted);
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 1.5;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .nav-link:hover {
+      background: transparent;
+      color: var(--seed-fg);
+    }
+
+    .nav-link.active,
+    .nav-link[aria-selected='true'] {
+      background: var(--card-bg);
+      color: var(--seed-fg);
+      box-shadow: inset 0 0 0 1px var(--border-subtle);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .progress-bar {
+        transition: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="viz-root"></div>
+  <!-- Reason: this must stay a classic inline script. The sandbox CSP allows
+       'unsafe-inline' but not 'self', so a Vite-served module could not load. -->
+  <script>
+    (() => {
+      'use strict';
+
+      const root = document.getElementById('viz-root');
+
+      // Reason: the offline page carries a CSP meta in its head; the online page
+      // does not. The renderer uses the same signal to keep or drop external
+      // resources, mirroring the policy the browser already enforces.
+      const NETWORK_ENABLED = !document.querySelector('meta[http-equiv="Content-Security-Policy"]');
+
+      const TOKEN_KEYS = [
+        '--seed-fg',
+        '--seed-muted',
+        '--seed-primary',
+        '--border-standard',
+        '--border-subtle',
+        '--card-bg',
+        '--inset-bg',
+        '--fill-1',
+        '--fill-2',
+        '--fill-3',
+        '--font-sans',
+        '--font-code',
+        '--viz-series-1',
+        '--viz-series-2',
+        '--viz-series-3',
+        '--viz-series-4',
+        '--viz-series-5',
+        '--viz-series-6',
+      ];
+
+      const BLOCKED_TAGS = new Set([
+        'iframe',
+        'frame',
+        'frameset',
+        'object',
+        'embed',
+        'applet',
+        'portal',
+        'base',
+      ]);
+      const headBaseline = new Set(Array.from(document.head.children));
+
+      let currentId = null;
+      let lastHeight = -1;
+      let rafId = 0;
+      let renderedTimer = 0;
+      let resizeObserver = null;
+      let mutationObserver = null;
+      let reportedErrors = new Set();
+      let documentAttributes = [];
+      let bodyAttributes = [];
+
+      function post(message) {
+        try {
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage(message, '*');
+          }
+        } catch {
+          // Reason: the parent frame can be torn down while a render is settling.
+        }
+      }
+
+      function errorMessage(error) {
+        if (typeof error === 'string') return error;
+        if (error && typeof error.message === 'string') return error.message;
+        try {
+          return String(error);
+        } catch {
+          return 'Unknown error';
+        }
+      }
+
+      function postError(message) {
+        if (currentId === null) return;
+        const text = String(message || 'Visualization error').slice(0, 1000);
+        if (reportedErrors.has(text)) return;
+        reportedErrors.add(text);
+        post({ type: 'viz:error', id: currentId, message: text });
+      }
+
+      function applyTheme(theme) {
+        const mode = theme.mode === 'dark' ? 'dark' : 'light';
+        document.documentElement.style.colorScheme = mode;
+
+        const tokens = theme.tokens && typeof theme.tokens === 'object' ? theme.tokens : {};
+        for (const key of TOKEN_KEYS) {
+          const value = tokens[key];
+          if (typeof value === 'string' && value.trim()) {
+            document.documentElement.style.setProperty(key, value.trim());
+          } else {
+            document.documentElement.style.removeProperty(key);
+          }
+        }
+      }
+
+      function cleanupHead() {
+        if (!document.head) return;
+        for (const node of Array.from(document.head.children)) {
+          if (headBaseline.has(node)) continue;
+          const tag = node.localName;
+          if (tag === 'style' || tag === 'link' || tag === 'base' || (tag === 'meta' && node.hasAttribute('http-equiv'))) {
+            node.remove();
+          }
+        }
+      }
+
+      function resetPage() {
+        try {
+          document.body.replaceChildren(root);
+        } catch {
+          document.documentElement.appendChild(root);
+        }
+        for (const name of documentAttributes) document.documentElement.removeAttribute(name);
+        for (const name of bodyAttributes) document.body.removeAttribute(name);
+        documentAttributes = [];
+        bodyAttributes = [];
+        root.textContent = '';
+        root.removeAttribute('class');
+        root.removeAttribute('style');
+        if (document.body) {
+          document.body.removeAttribute('class');
+          document.body.removeAttribute('style');
+        }
+        cleanupHead();
+      }
+
+      function mountHtml(html) {
+        // Reason: both hosts accept complete documents and fragments, but the sandbox document/channel stays intact.
+        const parsed = new DOMParser().parseFromString(html, 'text/html');
+        const copyAttributes = (source, target) => {
+          const names = [];
+          for (const attr of Array.from(source.attributes)) {
+            if (!/^(?:id|class|style|lang|dir|data-[\w-]+|aria-[\w-]+)$/.test(attr.name)) continue;
+            target.setAttribute(attr.name, attr.value);
+            names.push(attr.name);
+          }
+          return names;
+        };
+        documentAttributes = copyAttributes(parsed.documentElement, document.documentElement);
+        bodyAttributes = copyAttributes(parsed.body, document.body);
+        // Reason: styles and scripts in <head> must be preserved without importing base, refresh or document policy changes.
+        for (const node of Array.from(parsed.head.children)) {
+          if (['style', 'script', 'link'].includes(node.localName)) root.appendChild(document.importNode(node, true));
+        }
+        for (const node of Array.from(parsed.body.childNodes)) root.appendChild(document.importNode(node, true));
+      }
+
+      function isAllowedSrc(url, allowBlob) {
+        return url.startsWith('data:')
+          || (allowBlob && url.startsWith('blob:'))
+          || (NETWORK_ENABLED && url.startsWith('https://'));
+      }
+
+      function stripSrc(el, allowBlob) {
+        const value = el.getAttribute('src');
+        if (value === null) return;
+        if (!isAllowedSrc(value.trim().toLowerCase(), allowBlob)) el.removeAttribute('src');
+      }
+
+      function isAllowedSrcset(value) {
+        let rest = value.trim();
+        while (rest) {
+          rest = rest.replace(/^[\s,]+/, '');
+          if (!rest) return true;
+          const token = (rest.match(/^\S+/) || [''])[0];
+          if (!token) return true;
+          const dataUrl = /^data:/i.test(token);
+          const url = dataUrl ? token.replace(/,+$/, '') : token.split(',')[0];
+          if (!isAllowedSrc(url.trim().toLowerCase(), true)) return false;
+          if (!dataUrl && token.includes(',')) {
+            rest = rest.slice(url.length + 1);
+            continue;
+          }
+          rest = rest.slice(token.length);
+          const comma = rest.indexOf(',');
+          if (comma < 0) return true;
+          rest = rest.slice(comma + 1);
+        }
+        return true;
+      }
+
+      function sanitizeElement(el) {
+        const tag = el.localName;
+
+        if (BLOCKED_TAGS.has(tag)) {
+          el.remove();
+          return;
+        }
+        if (tag === 'meta' && el.hasAttribute('http-equiv')) {
+          el.remove();
+          return;
+        }
+        if (tag === 'link' && !NETWORK_ENABLED) {
+          el.remove();
+          return;
+        }
+
+        if (tag === 'script') {
+          stripSrc(el, false);
+          for (const attr of ['src', 'href', 'xlink:href']) {
+            if (attr === 'src' && NETWORK_ENABLED) continue;
+            el.removeAttribute(attr);
+          }
+        }
+
+        if (tag === 'form') {
+          for (const attr of ['action', 'method', 'enctype', 'target']) el.removeAttribute(attr);
+        }
+        if (tag === 'input' || tag === 'button') {
+          for (const attr of ['formaction', 'formmethod', 'formenctype', 'formtarget']) el.removeAttribute(attr);
+        }
+        if (tag === 'a' || tag === 'area') {
+          for (const attr of ['ping', 'target', 'download']) el.removeAttribute(attr);
+          for (const attr of ['href', 'xlink:href']) {
+            const href = el.getAttribute(attr);
+            if (href !== null && !href.trim().startsWith('#')) el.removeAttribute(attr);
+          }
+        }
+        if (tag === 'img' || tag === 'image' || tag === 'input') {
+          stripSrc(el, true);
+        } else if (tag === 'source' || tag === 'video' || tag === 'audio' || tag === 'track') {
+          stripSrc(el, true);
+        }
+        if (tag === 'img' || tag === 'video') {
+          const poster = el.getAttribute('poster');
+          if (poster !== null && !isAllowedSrc(poster.trim().toLowerCase(), true)) {
+            el.removeAttribute('poster');
+          }
+        }
+        if (tag === 'use') {
+          for (const attr of ['href', 'xlink:href']) {
+            const value = el.getAttribute(attr);
+            if (value !== null && !value.trim().startsWith('#')) el.removeAttribute(attr);
+          }
+        }
+        if (tag === 'image') {
+          for (const attr of ['href', 'xlink:href']) {
+            const value = el.getAttribute(attr);
+            if (value !== null && !isAllowedSrc(value.trim().toLowerCase(), true)) {
+              el.removeAttribute(attr);
+            }
+          }
+        }
+
+        for (const attr of ['srcset', 'imagesrcset']) {
+          const value = el.getAttribute(attr);
+          if (value !== null && !isAllowedSrcset(value)) el.removeAttribute(attr);
+        }
+        el.removeAttribute('background');
+        el.removeAttribute('lowsrc');
+        el.removeAttribute('dynsrc');
+      }
+
+      function sanitizeTree(container) {
+        if (!container || typeof container.querySelectorAll !== 'function') return;
+        for (const el of Array.from(container.querySelectorAll('*'))) {
+          sanitizeElement(el);
+        }
+        for (const template of Array.from(container.querySelectorAll('template'))) {
+          if (template.content) sanitizeTree(template.content);
+        }
+      }
+
+      function buildScript(original, renderId) {
+        const replacement = document.createElement('script');
+
+        for (const attr of Array.from(original.attributes)) {
+          const name = attr.name.toLowerCase();
+          if (name === 'href' || name === 'xlink:href') continue;
+          if (name === 'src' && !NETWORK_ENABLED) continue;
+          try {
+            replacement.setAttribute(attr.name, attr.value);
+          } catch {
+            // Reason: attribute names from parsed markup are valid, but a stray
+            // namespaced attribute must never abort the whole render.
+          }
+        }
+
+        replacement.textContent = original.textContent || '';
+
+        // Reason: data blocks (application/json, text/template, ...) are inert;
+        // keeping their type and text preserves islands read by other scripts.
+        return replacement;
+      }
+
+      async function executeScripts(container, renderId) {
+        for (const original of Array.from(container.querySelectorAll('script'))) {
+          if (currentId !== renderId) return;
+          let replacement;
+          try {
+            replacement = buildScript(original, renderId);
+            const type = (replacement.getAttribute('type') || '').trim().toLowerCase();
+            const executable = !type || type === 'module' || /^(?:text|application)\/(?:java|ecma)script$/.test(type);
+            const needsLoad = executable && (replacement.hasAttribute('src') || type === 'module');
+            // Reason: dynamically inserted classic scripts default to async; preserve author order for CDN dependencies.
+            if (executable && replacement.hasAttribute('src') && type !== 'module') replacement.async = false;
+            if (needsLoad) {
+              await new Promise((resolve) => {
+                let done = false;
+                const finish = (error) => {
+                  if (done) return;
+                  done = true;
+                  clearTimeout(timer);
+                  if (error && currentId === renderId) postError(error);
+                  resolve();
+                };
+                const timer = window.setTimeout(() => finish('Script load timed out.'), 10000);
+                replacement.addEventListener('load', () => finish(), { once: true });
+                replacement.addEventListener('error', () => finish('Script failed to load.'), { once: true });
+                original.replaceWith(replacement);
+              });
+            } else {
+              original.replaceWith(replacement);
+            }
+          } catch (error) {
+            postError('Failed to run a script: ' + errorMessage(error));
+          }
+        }
+      }
+
+      function measureAndPost() {
+        if (currentId === null) return;
+        let height = 0;
+        try {
+          // Reason: documentElement.scrollHeight never drops below the iframe
+          // viewport, which would pin the frame at its current height and make
+          // shrinking impossible; the content root/body has no such floor.
+          height = Math.ceil(Math.max(
+            root.getBoundingClientRect().height,
+            root.scrollHeight,
+            document.body ? document.body.scrollHeight : 0,
+          ));
+        } catch {
+          return;
+        }
+        if (!Number.isFinite(height) || height < 0 || height === lastHeight) return;
+        lastHeight = height;
+        post({ type: 'viz:resize', id: currentId, height });
+      }
+
+      function scheduleMeasure() {
+        if (rafId !== 0) return;
+        rafId = requestAnimationFrame(() => {
+          rafId = 0;
+          measureAndPost();
+        });
+      }
+
+      function observe() {
+        // Reason: a hostile fragment can remove <body>; observing the root keeps
+        // height tracking alive until the next render reattaches it.
+        const scope = document.body || root;
+        if (typeof ResizeObserver === 'function') {
+          resizeObserver = new ResizeObserver(scheduleMeasure);
+          resizeObserver.observe(scope);
+          resizeObserver.observe(root);
+        }
+        mutationObserver = new MutationObserver(scheduleMeasure);
+        mutationObserver.observe(scope, {
+          subtree: true,
+          childList: true,
+          attributes: true,
+          characterData: true,
+        });
+      }
+
+      function teardown() {
+        currentId = null;
+        lastHeight = -1;
+        reportedErrors = new Set();
+        if (rafId !== 0) {
+          cancelAnimationFrame(rafId);
+          rafId = 0;
+        }
+        if (renderedTimer !== 0) {
+          clearTimeout(renderedTimer);
+          renderedTimer = 0;
+        }
+        if (resizeObserver) {
+          resizeObserver.disconnect();
+          resizeObserver = null;
+        }
+        if (mutationObserver) {
+          mutationObserver.disconnect();
+          mutationObserver = null;
+        }
+      }
+
+      async function render(id, html, theme) {
+        teardown();
+        currentId = id;
+
+        resetPage();
+
+        try {
+          mountHtml(html);
+          // Reason: document-level style attributes must not discard the host theme aliases.
+          if (theme && typeof theme === 'object') applyTheme(theme);
+        } catch (error) {
+          postError('Failed to insert visualization HTML: ' + errorMessage(error));
+          return;
+        }
+
+        try {
+          sanitizeTree(root);
+          await executeScripts(root, id);
+          if (currentId !== id) return;
+        } catch (error) {
+          postError('Failed to prepare visualization: ' + errorMessage(error));
+        }
+
+        observe();
+        measureAndPost();
+
+        // Reason: a final task lets immediate script errors settle before hosts dismiss their loading state.
+        renderedTimer = window.setTimeout(() => {
+          renderedTimer = 0;
+          if (currentId !== id) return;
+          post({ type: 'viz:rendered', id });
+          scheduleMeasure();
+        }, 0);
+      }
+
+      function blockAnchorNavigation(event) {
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+        const anchor = target.closest('a, area');
+        if (!anchor) return;
+        const href = anchor.getAttribute('href') ?? anchor.getAttribute('xlink:href') ?? '';
+        if (href && !href.trim().startsWith('#')) event.preventDefault();
+      }
+
+      root.addEventListener('click', blockAnchorNavigation, true);
+      root.addEventListener('auxclick', blockAnchorNavigation, true);
+      root.addEventListener('submit', (event) => event.preventDefault(), true);
+      window.addEventListener('resize', scheduleMeasure);
+
+      // Reason: opaque-origin frames may not dispatch navigate events. Host pages
+      // must enforce frame-src 'self'; this listener only adds defense where the
+      // Navigation API exposes a cancelable cross-document event.
+      if (window.navigation && typeof window.navigation.addEventListener === 'function') {
+        window.navigation.addEventListener('navigate', (event) => {
+          const destination = event.destination;
+          if (event.cancelable && !(destination && destination.sameDocument)) {
+            event.preventDefault();
+          }
+        });
+      }
+
+      // Reason: document.write()/open() would replace this document and destroy the
+      // message channel, so they are neutralized; the fragment still has full DOM APIs.
+      try {
+        const denyWrite = () => postError('document.write() is not supported inside the visualization sandbox.');
+        Object.defineProperty(document, 'write', { configurable: true, writable: true, value: denyWrite });
+        Object.defineProperty(document, 'writeln', { configurable: true, writable: true, value: denyWrite });
+        Object.defineProperty(document, 'open', { configurable: true, writable: true, value: () => document });
+        Object.defineProperty(document, 'close', { configurable: true, writable: true, value: () => {} });
+      } catch {
+        // Reason: a non-configurable Document method must not prevent the renderer
+        // from starting; CSP still gates every resource the document can request.
+      }
+
+      window.addEventListener('error', (event) => {
+        if (currentId === null) return;
+        const message = event.error ? errorMessage(event.error) : (event.message || 'Script error');
+        postError(message);
+      });
+
+      window.addEventListener('unhandledrejection', (event) => {
+        if (currentId === null) return;
+        postError('Unhandled rejection: ' + errorMessage(event.reason));
+      });
+
+      window.addEventListener('message', (event) => {
+        if (event.source !== window.parent) return;
+        const data = event.data;
+        if (!data || typeof data !== 'object' || typeof data.type !== 'string') return;
+
+        if (data.type === 'viz:render') {
+          if (typeof data.id !== 'string' || data.id === '') return;
+          const html = typeof data.html === 'string' ? data.html : '';
+          try {
+            render(data.id, html, data.theme).catch((error) => postError('Failed to render HTML: ' + errorMessage(error)));
+          } catch (error) {
+            postError('Failed to render visualization: ' + errorMessage(error));
+          }
+          return;
+        }
+
+        if (data.type === 'viz:theme') {
+          if (typeof data.id !== 'string' || data.id !== currentId) return;
+          if (data.theme && typeof data.theme === 'object') applyTheme(data.theme);
+          scheduleMeasure();
+        }
+      });
+
+      post({ type: 'viz:ready' });
+    })();
+  </script>
+</body>
+</html>

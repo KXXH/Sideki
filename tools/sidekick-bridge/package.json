@@ -1,0 +1,12 @@
+{
+  "name": "sidekick-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "WebSocket + HTTP bridge between Sideki extension and Claude Code",
+  "scripts": {
+    "start": "node scripts/bridge.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

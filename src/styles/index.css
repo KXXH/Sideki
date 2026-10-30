@@ -1,0 +1,631 @@
+/* Reason: inlined from Google Fonts CSS to avoid render-blocking @import url().
+   Only latin subset — Chinese glyphs fall through to system-ui. */
+@font-face { font-family: 'DM Sans'; font-style: italic; font-weight: 400; font-display: swap; src: url(https://fonts.gstatic.com/s/dmsans/v17/rP2Wp2ywxg089UriCZaSExdy3sGt9zz86GPwyKy58Q.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'DM Sans'; font-style: normal; font-weight: 300; font-display: swap; src: url(https://fonts.gstatic.com/s/dmsans/v17/rP2Hp2ywxg089UriCZOIHQ.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'DM Sans'; font-style: normal; font-weight: 400; font-display: swap; src: url(https://fonts.gstatic.com/s/dmsans/v17/rP2Hp2ywxg089UriCZOIHQ.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'DM Sans'; font-style: normal; font-weight: 500; font-display: swap; src: url(https://fonts.gstatic.com/s/dmsans/v17/rP2Hp2ywxg089UriCZOIHQ.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'DM Sans'; font-style: normal; font-weight: 600; font-display: swap; src: url(https://fonts.gstatic.com/s/dmsans/v17/rP2Hp2ywxg089UriCZOIHQ.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPxDcwg.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 500; font-display: swap; src: url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPxDcwg.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
+@import "tailwindcss";
+
+/* Reason: streamdown's built-in components (h5/h6, sup/sub, img, tbody — the
+   rest are overridden in StreamingMarkdown) carry Tailwind classes that live in
+   its own dist. Without this line those classes are only generated when a
+   previous build's dist/ happens to be scanned, so a clean build drops them. */
+@source "../../node_modules/streamdown/dist/*.js";
+
+@theme {
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-content: 'DM Sans', system-ui, sans-serif;
+  --font-content-size: 13px;
+  /* Light mode defaults — overridden by dark media query below */
+  --color-surface: #f6f6f2;
+  --color-surface-raised: #ffffff;
+  --color-surface-overlay: #eaeae4;
+  --color-border-subtle: #d8d8d0;
+  --color-border-muted: #e6e6df;
+  --color-text-primary: #111110;
+  --color-text-secondary: #5b5b56;
+  --color-text-muted: #8e8e87;
+  --color-accent: #d0261a;
+  --color-accent-dim: #a61a10;
+  --color-accent-wash: rgba(208, 38, 26, 0.07);
+  --color-accent-glow: rgba(208, 38, 26, 0.14);
+  --color-success: #197a4b;
+  --color-error: #b42318;
+  --color-warning: #9a5b00;
+  --color-user-bubble: #ecece6;
+  --color-user-bubble-text: #111110;
+  --color-on-accent: #ffffff;
+}
+
+@layer base {
+  /* Chat gutter — grows with the panel so wide layouts don't pin text to the edges. */
+  :root {
+    --chat-gutter: 12px;
+    --chat-content-max: 600px;
+  }
+  @media (min-width: 480px) {
+    :root { --chat-gutter: 20px; }
+  }
+  @media (min-width: 720px) {
+    :root { --chat-gutter: 24px; }
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    -webkit-font-smoothing: antialiased;
+    font-size: 13px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-color-mode]) {
+      --color-surface: #0b0b0a;
+      --color-surface-raised: #151514;
+      --color-surface-overlay: #1f1f1d;
+      --color-border-subtle: #30302c;
+      --color-border-muted: #242421;
+      --color-text-primary: #f3f3ee;
+      --color-text-secondary: #a8a8a1;
+      --color-text-muted: #6e6e67;
+      --color-accent: #ff4438;
+      --color-accent-dim: #d0261a;
+      --color-accent-wash: rgba(255, 68, 56, 0.09);
+      --color-accent-glow: rgba(255, 68, 56, 0.17);
+      --color-success: #4cc38a;
+      --color-error: #ff7a6e;
+      --color-warning: #f0b429;
+      --color-user-bubble: #232321;
+      --color-user-bubble-text: #f3f3ee;
+      --color-on-accent: #0b0b0a;
+    }
+  }
+}
+
+/* Pro mode — forced dark instrument surface. Neutrals and accent are applied by
+   themes.ts (fixed graphite base + the selected theme's dark accent); this class
+   only carries the instrument color scheme. */
+html.pro-mode {
+  color-scheme: dark;
+}
+
+/* Syntax highlighting — CSS Custom Highlight API, no DOM nodes involved.
+   Reason: ::highlight() pseudo-elements do not participate in CSS transitions,
+   so the bloom is driven by JS stepping --code-p from 0 to 1 (see
+   src/sidepanel/code-highlight.ts). Only color-ish properties are honored here;
+   font-weight and font-style are silently ignored by the spec.
+
+   The bloom starts from --syn-fg, not currentColor: highlight pseudo-elements inherit
+   through their own chain (css-pseudo-4 highlight inheritance) rather than from the
+   originating element, so currentColor resolves to the root color instead of the code
+   text color. Pointing --syn-fg at a token makes it track all three themes for free.
+
+   Syntax hues are mixed from the theme's own accent/semantic tokens, so a code block
+   belongs to its theme without carrying a second hardcoded palette. */
+:root {
+  --syn-fg: var(--color-text-secondary);
+  --syn-comment: var(--color-text-muted);
+  --syn-keyword: var(--color-accent);
+  --syn-operator: var(--color-text-secondary);
+  --syn-string: var(--color-success);
+  --syn-constant: color-mix(in oklab, var(--color-accent) 45%, var(--color-text-primary));
+  --syn-function: color-mix(in oklab, var(--color-accent) 72%, var(--color-text-primary));
+  --syn-type: var(--color-warning);
+  --syn-variable: color-mix(in oklab, var(--color-accent) 55%, var(--color-text-secondary));
+  --syn-property: color-mix(in oklab, var(--color-accent) 62%, var(--color-text-secondary));
+  --syn-tag: var(--color-success);
+  --syn-selector: var(--color-accent);
+  --syn-inserted: var(--color-success);
+  --syn-deleted: var(--color-error);
+  --glitch-1: #3a0d08;
+  --glitch-2: #d0261a;
+  --glitch-3: #ff6a5e;
+  --theme-border-width: 1px;
+  --theme-blur: 20px;
+  --theme-glass-fill: rgba(246, 246, 242, 0.72);
+  --theme-glass-edge: rgba(17, 17, 16, 0.10);
+  --theme-shadow-raised: 0 1px 2px rgba(17, 17, 16, 0.06), 0 2px 8px rgba(17, 17, 16, 0.06);
+  --theme-shadow-overlay: 0 16px 40px rgba(17, 17, 16, 0.16);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-color-mode]) {
+    --theme-glass-fill: rgba(11, 11, 10, 0.64);
+    --theme-glass-edge: rgba(255, 255, 255, 0.08);
+    --theme-shadow-raised: 0 4px 14px rgba(0, 0, 0, 0.36);
+    --theme-shadow-overlay: 0 20px 48px rgba(0, 0, 0, 0.52);
+  }
+}
+
+.pro-mode {
+  --syn-comment: #6b737c;
+  --syn-keyword: #f0a35e;
+  --syn-operator: #8b939b;
+  --syn-string: #d9c47a;
+  --syn-constant: #7fb8d4;
+  --syn-function: #e0b877;
+  --syn-type: #d4a06a;
+  --syn-variable: #9ec7d8;
+  --syn-property: #a8cfdd;
+  --syn-tag: #d9c47a;
+  --syn-selector: #e0b877;
+  --syn-inserted: #85e89d;
+  --syn-deleted: #f97583;
+}
+
+/* Streaming shimmer — a white light band sweeping across in-progress labels. On a
+   white background a white band can only read as bleaching the glyphs down to the
+   page color; on the dark background it reads as brightening. Alpha is the knob
+   that keeps the two themes equally strong (~35 ΔL*). */
+:root {
+  --shimmer-base: var(--color-text-muted);
+  --shimmer-band: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-color-mode]) { --shimmer-band: rgba(255, 255, 255, 0.73); }
+}
+
+:root[data-color-mode="dark"]:not(.pro-mode) { --shimmer-band: rgba(255, 255, 255, 0.73); }
+
+.pro-mode { --shimmer-band: rgba(255, 255, 255, 0.73); }
+
+/* Reason: no default declaration for --code-p — it is set on the block wrapper by
+   the bloom animation and inherits down. Declaring it on <code> would shadow that
+   inherited value. The var() fallback of 1 covers blocks whose bloom never ran, so
+   a missed animation degrades to "instantly colored" rather than invisible. */
+
+@layer utilities {
+  /* Reason: long URLs and identifiers must stay readable in a narrow panel;
+     normal words still wrap at their usual boundaries before this fallback. */
+  .markdown-content {
+    overflow-wrap: anywhere;
+    word-break: normal;
+    text-autospace: normal;
+  }
+
+  /* Reason: prose spacing must not alter the visual structure of source code
+     or formulas. Fenced code keeps its own horizontal scrolling surface. */
+  .markdown-content :is(pre, code, kbd, samp, .katex) {
+    text-autospace: no-autospace;
+  }
+  .markdown-content pre {
+    overflow-wrap: normal;
+  }
+
+  /* Category names come from microlighter's TextMate scope flattening; the
+     grouping mirrors its bundled themes so new categories keep working. */
+  ::highlight(comment),
+  ::highlight(quote) { color: color-mix(in oklab, var(--syn-fg), var(--syn-comment) calc(var(--code-p, 1) * 100%)); }
+
+  ::highlight(keyword),
+  ::highlight(storage),
+  ::highlight(at-rule),
+  ::highlight(doctype),
+  ::highlight(important),
+  ::highlight(section) { color: color-mix(in oklab, var(--syn-fg), var(--syn-keyword) calc(var(--code-p, 1) * 100%)); }
+
+  ::highlight(operator),
+  ::highlight(punctuation) { color: color-mix(in oklab, var(--syn-fg), var(--syn-operator) calc(var(--code-p, 1) * 100%)); }
+
+  ::highlight(string),
+  ::highlight(regexp),
+  ::highlight(attribute-value),
+  ::highlight(link),
+  ::highlight(raw) { color: color-mix(in oklab, var(--syn-fg), var(--syn-string) calc(var(--code-p, 1) * 100%)); }
+
+  ::highlight(numeric),
+  ::highlight(boolean),
+  ::highlight(constant),
+  ::highlight(symbol),
+  ::highlight(character-entity),
+  ::highlight(anchor),
+  ::highlight(entity) { color: color-mix(in oklab, var(--syn-fg), var(--syn-constant) calc(var(--code-p, 1) * 100%)); }
+
+  ::highlight(function),
+  ::highlight(decorator),
+  ::highlight(animation) { color: color-mix(in oklab, var(--syn-fg), var(--syn-function) calc(var(--code-p, 1) * 100%)); }
+
+  ::highlight(type),
+  ::highlight(support) { color: color-mix(in oklab, var(--syn-fg), var(--syn-type) calc(var(--code-p, 1) * 100%)); }
+
+  ::highlight(variable),
+  ::highlight(interpolation) { color: color-mix(in oklab, var(--syn-fg), var(--syn-variable) calc(var(--code-p, 1) * 100%)); }
+
+  ::highlight(property),
+  ::highlight(key),
+  ::highlight(attribute-name) { color: color-mix(in oklab, var(--syn-fg), var(--syn-property) calc(var(--code-p, 1) * 100%)); }
+
+  ::highlight(tag) { color: color-mix(in oklab, var(--syn-fg), var(--syn-tag) calc(var(--code-p, 1) * 100%)); }
+  ::highlight(selector) { color: color-mix(in oklab, var(--syn-fg), var(--syn-selector) calc(var(--code-p, 1) * 100%)); }
+  ::highlight(inserted) { color: color-mix(in oklab, var(--syn-fg), var(--syn-inserted) calc(var(--code-p, 1) * 100%)); }
+  ::highlight(deleted) { color: color-mix(in oklab, var(--syn-fg), var(--syn-deleted) calc(var(--code-p, 1) * 100%)); }
+}
+
+@layer components {
+  .input-base {
+    @apply w-full rounded-lg border bg-surface-raised px-3 py-2 text-sm text-text-primary placeholder-text-muted outline-none transition-all;
+    border-color: var(--color-border-subtle);
+  }
+  .input-base:focus {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 2px var(--color-accent-wash);
+  }
+}
+
+@layer utilities {
+  @keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slide-down {
+    from { opacity: 0; transform: translateY(-4px) scaleY(0.96); }
+    to { opacity: 1; transform: translateY(0) scaleY(1); }
+  }
+  @keyframes slide-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+  .animate-fade-in-up {
+    animation: fade-in-up 0.25s ease-out both;
+  }
+  .animate-slide-down {
+    animation: slide-down 0.18s ease-out both;
+  }
+  /* Reason: mirror of slide-down for menus that open upward from the input bar */
+  @keyframes slide-up-in {
+    from { opacity: 0; transform: translateY(4px) scaleY(0.96); }
+    to { opacity: 1; transform: translateY(0) scaleY(1); }
+  }
+  .animate-slide-up-in {
+    animation: slide-up-in 0.18s ease-out both;
+    transform-origin: bottom;
+  }
+  .animate-slide-up {
+    animation: slide-up 0.25s ease-out both;
+  }
+  .animate-pulse-glow {
+    animation: pulse-glow 1.5s ease-in-out infinite;
+  }
+
+  @keyframes shimmer-sweep {
+    from { background-position: 150% center; }
+    to { background-position: -50% center; }
+  }
+  /* Reason: the band has to stay narrow (10% of a 200% strip). A wider one lights a
+     short label up as a whole instead of sweeping across it. Percentages resolve
+     against each element's own width, so one rule fits labels of any length.
+     Applies to a wrapper as well: -webkit-text-fill-color inherits, so nested labels
+     paint the same gradient without per-child rules. */
+  .shimmer-sweep {
+    background-image: linear-gradient(120deg, var(--shimmer-base) 0%, var(--shimmer-base) 42%, var(--shimmer-band) 50%, var(--shimmer-base) 58%, var(--shimmer-base) 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: shimmer-sweep 2.2s linear infinite;
+  }
+
+  /* Top/bottom edge highlight — mimics light refraction on glass edge.
+     Width and color come from the theme's material so a paper theme can have a
+     near-invisible seam while a technical theme gets a harder one. */
+  .glass-edge-t {
+    border-top: var(--theme-border-width) solid var(--theme-glass-edge);
+  }
+  .glass-edge-b {
+    border-bottom: var(--theme-border-width) solid var(--theme-glass-edge);
+  }
+
+  /* Input shelf — the tinted glass band the composer sits on. */
+  .glass-shelf {
+    background: var(--theme-glass-fill);
+    backdrop-filter: blur(var(--theme-blur)) saturate(1.8);
+  }
+
+  /* Quick-action chips — float above the input shelf, so their own backdrop
+     actually samples the chat. Low fill is what reads as glass. */
+  .quick-chip {
+    border: var(--theme-border-width) solid color-mix(in oklab, var(--theme-glass-edge) 85%, transparent);
+    background: color-mix(in oklab, var(--theme-glass-fill) 72%, transparent);
+    box-shadow:
+      inset 0 1px 0 var(--theme-glass-edge),
+      var(--theme-shadow-raised);
+    backdrop-filter: blur(var(--theme-blur)) saturate(1.5);
+  }
+
+  /* Material roles — every floating surface picks one of these instead of a
+     fixed shadow utility, so depth belongs to the theme. */
+  .theme-raised {
+    box-shadow: var(--theme-shadow-raised);
+  }
+  .theme-overlay {
+    border: var(--theme-border-width) solid color-mix(in oklab, var(--color-border-subtle) 82%, transparent);
+    background: color-mix(in oklab, var(--color-surface-raised) 84%, transparent);
+    box-shadow: var(--theme-shadow-overlay);
+    backdrop-filter: blur(var(--theme-blur)) saturate(1.6);
+  }
+
+
+  /* Reading column — message content only. Chrome stays full-width with the
+     gutter so wide panels don't push the title and status bar toward the middle. */
+  .chat-column {
+    width: 100%;
+    max-width: var(--chat-content-max);
+    margin-inline: auto;
+    padding-inline: var(--chat-gutter);
+  }
+
+  /* Session dropdown edges follow the top bar, which spans the panel. */
+  .session-dropdown {
+    left: var(--chat-gutter);
+    right: var(--chat-gutter);
+  }
+
+  /* Chat context bar — opaque app band, with a short blur seam where the
+     scroll area passes underneath. */
+  .chat-top-bar {
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    z-index: 10;
+    background: var(--color-surface);
+    border-bottom: var(--theme-border-width) solid var(--color-border-subtle);
+  }
+  .chat-top-fade {
+    position: absolute;
+    left: 0;
+    right: 0;
+    /* Reason: the fade starts fully opaque and would paint over the bar's hairline. */
+    top: calc(100% + var(--theme-border-width));
+    height: 12px;
+    background: linear-gradient(to bottom, var(--color-surface), transparent);
+    backdrop-filter: blur(var(--theme-blur)) saturate(1.2);
+    -webkit-mask-image: linear-gradient(to bottom, #000, transparent);
+    mask-image: linear-gradient(to bottom, #000, transparent);
+    pointer-events: none;
+  }
+
+  /* Reason: CSS grid row trick gives smooth height animation without JS measuring.
+     Wrap content in .expand-panel > div.overflow-hidden for collapse/expand. */
+  .expand-panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition: grid-template-rows 0.25s ease-out, opacity 0.2s ease-out;
+  }
+  .expand-panel.is-open {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+  .expand-panel > * {
+    overflow: hidden;
+  }
+
+  @keyframes lines-rotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(180deg); }
+  }
+
+  /* EmptyState: one-shot soft rise-in */
+  @keyframes empty-rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+  }
+
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .animate-fade-in {
+    animation: fade-in 0.2s ease-out both;
+  }
+
+  /* Header label slot — the rotating label and "查看 N 个步骤" share one box, and
+     swapping them by a cross-dissolve keeps the hard cut from reading as a glitch.
+     Both layers occupy the same spot; only the outgoing one is out of flow, so the
+     row width follows the incoming text at once (no width animation: nothing sits
+     to the right of the label while streaming). */
+  @keyframes swap-in {
+    from { opacity: 0; filter: blur(3px); transform: translateX(4px); }
+    to { opacity: 1; filter: blur(0); transform: none; }
+  }
+  @keyframes swap-out {
+    from { opacity: 1; filter: blur(0); transform: none; }
+    to { opacity: 0; filter: blur(3px); transform: translateX(-4px); }
+  }
+  /* Reason: 3px is the ceiling for 11px text — more turns the label into a smudge. */
+  .swap-in {
+    animation: swap-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+  }
+  /* Reason: the count is a state change, not ambient text churn — a short entrance
+     keeps it crisp and, more importantly, gets it visible before the digits land.
+     At the label's 0.6s/0.12s the digits were already settled while the line still
+     sat at half opacity, so the roll read as "the number just faded in". */
+  .swap-in-fast {
+    animation: swap-in 0.24s ease-out both;
+  }
+  /* Reason: must stay in sync with SWAP_OUT_MS in MessageList.tsx — the layer is
+     dropped by a timer, and dropping it early trims the fade. */
+  .swap-out {
+    animation: swap-out 0.4s ease-out both;
+  }
+
+  /* Rolling digits in "查看 N 个步骤". The ghost is the real number: it carries the
+     row width, the baseline and the accessible name; the reel is an absolutely
+     positioned overlay of one column per digit.
+     Reason for transparent over hidden: hidden text leaves the a11y tree, which
+     would make the button announce "查看 个步骤". */
+  .roll-num {
+    position: relative;
+    display: inline-block;
+    font-variant-numeric: tabular-nums;
+  }
+  .roll-num > .roll-ghost {
+    color: transparent;
+  }
+  .roll-num > .roll-reel {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 1lh;
+    display: flex;
+  }
+  .roll-reel > span {
+    width: 1ch;
+    height: 1lh;
+    overflow: hidden;
+  }
+  /* Reason: rows are 1lh tall so the digits land on the text baseline — an em-based
+     row drifts by the line-height half-leading. The 0.14s lead-in lets the count line
+     become readable first; without it the drop is over before the row is visible. */
+  .roll-reel .roll-strip {
+    display: block;
+    animation: roll-drop 0.48s cubic-bezier(0.22, 1, 0.36, 1) calc(0.14s + var(--roll-delay, 0ms)) both;
+  }
+  .roll-reel .roll-strip > i {
+    display: block;
+    height: 1lh;
+    line-height: inherit;
+    font-style: normal;
+  }
+  /* Reason: a count already on screen at the first render (panel reopened, session
+     switched) must not replay the drop — the animation belongs to the label → count
+     change, not to the mount. Static strips still show their first row, which is the
+     final digit. */
+  .roll-num.roll-static .roll-strip {
+    animation: none;
+  }
+  @keyframes roll-drop {
+    from { transform: translateY(calc(var(--roll-steps, 2) * -1lh)); }
+    to { transform: translateY(0); }
+  }
+
+  /* Markdown list markers — one column shared by ul and ol. Ordered lists put a
+     zero-padded counter in that column; GFM task items hide it and let the
+     checkbox be the marker. */
+  .markdown-content .sk-md-list-marker {
+    display: flex;
+    align-items: center;
+    width: 14px;
+    height: 1.65em;
+  }
+  .markdown-content .sk-md-list-marker::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--color-accent) 40%, transparent);
+  }
+  .markdown-content ol > li { counter-increment: item; }
+  .markdown-content ol > li > .sk-md-list-marker::before {
+    content: counter(item, decimal-leading-zero);
+    width: auto;
+    height: auto;
+    border-radius: 0;
+    background: none;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    color: var(--color-accent);
+    font-variant-numeric: tabular-nums;
+  }
+  /* Streamdown strips remark-gfm's task-list-item class but keeps the checkbox,
+     so the checkbox itself identifies the item. */
+  .markdown-content li:has(> span > input[type="checkbox"]) > .sk-md-list-marker { display: none; }
+
+  /* GFM footnotes: keep the definitions visually attached to the message but
+     separated from the body; the generated label itself stays screen-reader-only. */
+  .markdown-content .footnotes {
+    margin-top: 14px;
+    padding-top: 8px;
+    border-top: 1px solid var(--color-border-subtle);
+  }
+
+  /* Pro mode — mouse-following glow on top bar bottom edge */
+  .pro-bar-glow {
+    --glow-x: 50%;
+    --glow-opacity: 0;
+    overflow: visible;
+  }
+  .pro-bar-glow::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0;
+    bottom: -1px;
+    height: 1px;
+    background: radial-gradient(
+      ellipse 120px 1px at var(--glow-x) 50%,
+      var(--color-accent) 0%,
+      transparent 100%
+    );
+    opacity: var(--glow-opacity);
+    transition: opacity 0.3s ease-out;
+    pointer-events: none;
+    z-index: 1;
+  }
+  /* Reason: outer glow bleeds below the bar for a soft halo effect */
+  .pro-bar-glow::before {
+    content: "";
+    position: absolute;
+    left: 0; right: 0;
+    bottom: -20px;
+    height: 20px;
+    background: radial-gradient(
+      ellipse 160px 18px at var(--glow-x) 0%,
+      var(--color-accent-glow) 0%,
+      transparent 100%
+    );
+    opacity: var(--glow-opacity);
+    transition: opacity 0.3s ease-out;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Pro mode — per-line backdrop blur on markdown text */
+  .pro-mode .markdown-content p,
+  .pro-mode .markdown-content li,
+  .pro-mode .markdown-content h1,
+  .pro-mode .markdown-content h2,
+  .pro-mode .markdown-content h3,
+  .pro-mode .markdown-content h4,
+  .pro-mode .markdown-content blockquote {
+    backdrop-filter: blur(8px);
+    background: rgba(14, 15, 19, 0.25);
+    border-radius: 4px;
+    padding-left: 6px;
+    padding-right: 6px;
+    margin-left: -6px;
+    margin-right: -6px;
+  }
+
+  /* Pro mode — each icon scales from its own center */
+  .pro-icon {
+    transition: opacity 400ms ease-out, transform 400ms ease-out;
+  }
+
+  /* Pro mode input glow */
+  .pro-mode .pro-input-glow {
+    box-shadow: 0 0 0 1px var(--color-accent-dim), 0 0 8px var(--color-accent-wash);
+  }
+}
+
+/* Reason: Streamdown's animation stylesheet is unlayered, so this override must
+   also live outside Tailwind layers to respect the system motion preference. */
+@media (prefers-reduced-motion: reduce) {
+  .markdown-content [data-sd-animate],
+  .markdown-content [data-sd-animate-marker]::marker {
+    animation: none;
+  }
+}

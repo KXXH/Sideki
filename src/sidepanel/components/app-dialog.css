@@ -1,0 +1,29 @@
+.app-dialog{--dialog-gutter:20px;position:fixed;inset:0;width:100%;height:100dvh;max-width:none;max-height:none;margin:0;padding:12px;border:0;background:transparent;color:var(--color-text-primary);box-sizing:border-box;overflow:hidden}
+.app-dialog[open]{display:flex;align-items:center;justify-content:center}
+.app-dialog[data-placement=bottom]{align-items:flex-end;padding-top:40px}
+.app-dialog::backdrop{background:transparent}
+.app-dialog-backdrop{position:absolute;inset:0;background:rgb(0 0 0 / .4)}
+.app-dialog-panel{position:relative;display:flex;flex-direction:column;width:100%;max-width:520px;max-height:min(100%,calc(100dvh - 48px));min-height:0;overflow:hidden;border:1px solid var(--color-border-subtle);border-radius:14px;background:var(--color-surface-raised);box-shadow:var(--theme-shadow-overlay)}
+.app-dialog-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0;padding:17px var(--dialog-gutter) 15px;border-bottom:1px solid var(--color-border-subtle)}
+.app-dialog-header h2{min-width:0;margin:0;font-size:19px;font-weight:500;line-height:1.4;letter-spacing:-.4px;overflow-wrap:anywhere}
+.app-dialog-close{display:grid;place-items:center;flex-shrink:0;width:30px;height:30px;border-radius:6px;color:var(--color-text-muted);transition:background-color .15s,color .15s}
+.app-dialog-close>svg{width:17px;height:17px}
+.app-dialog-close:hover{color:var(--color-text-primary);background:var(--color-surface-overlay)}
+.app-dialog-close:disabled{opacity:.4;cursor:not-allowed}
+.app-dialog-body{min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--color-border-subtle) transparent;padding:19px var(--dialog-gutter) 22px;overflow-wrap:anywhere}
+.app-dialog-footer{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-shrink:0;padding:14px var(--dialog-gutter);border-top:1px solid var(--color-border-subtle);background:var(--color-surface-raised)}
+.app-dialog-action{display:flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:9px 18px;border:1px solid transparent;border-radius:7px;font-size:13px;font-weight:500;line-height:1.5;transition:background-color .15s,opacity .15s}
+.app-dialog-action>svg{width:15px;height:15px;flex-shrink:0}
+.app-dialog-action-secondary{min-width:88px;background:var(--color-surface);border-color:var(--color-border-subtle);color:var(--color-text-secondary)}
+.app-dialog-action-secondary:hover{background:var(--color-surface-overlay);color:var(--color-text-primary)}
+.app-dialog-action-primary{flex:1;background:var(--color-accent);color:var(--color-on-accent)}
+.app-dialog-action-danger{flex:1;background:var(--color-error);color:white}
+.app-dialog-action-primary:hover,.app-dialog-action-danger:hover{filter:brightness(.95)}
+.app-dialog-action:disabled{opacity:.45;cursor:not-allowed;filter:none}
+.app-dialog :is(button,input,select,textarea):focus-visible{outline:2px solid var(--color-accent);outline-offset:3px}
+/* Reason: full-width fields sit inside clipped reveal containers; keep their focus outline inside the control. */
+.app-dialog :is(input:not([type=checkbox]):not([type=radio]),select,textarea):focus-visible{outline-offset:-2px}
+.app-dialog-footer-error{flex:1;min-width:0;font-size:11px;color:var(--color-error)}
+@media(max-width:400px){.app-dialog{--dialog-gutter:16px;padding:8px}.app-dialog[data-placement=bottom]{padding-top:32px}}
+@media(pointer:coarse){.app-dialog-close{width:40px;height:40px}.app-dialog-action{min-height:44px}}
+@media(prefers-reduced-motion:reduce){.app-dialog :is(.app-dialog-action,.app-dialog-close){transition:none}}

@@ -1,0 +1,1517 @@
+{
+ "page": 2,
+ "items": [
+  {
+   "str": "1",
+   "transform": [
+    11.9552,
+    0,
+    0,
+    11.9552,
+    108,
+    710.037
+   ],
+   "width": 5.9776,
+   "height": 11.9552,
+   "hasEOL": false
+  },
+  {
+   "str": " ",
+   "transform": [
+    11.9552,
+    0,
+    0,
+    11.9552,
+    113.9776,
+    710.037
+   ],
+   "width": 11.955200000000005,
+   "height": 0,
+   "hasEOL": false
+  },
+  {
+   "str": "Introduction",
+   "transform": [
+    11.9552,
+    0,
+    0,
+    11.9552,
+    125.9328,
+    710.037
+   ],
+   "width": 64.8808704,
+   "height": 11.9552,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    108,
+    685.354
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "Recurrent neural networks, long short-term memory [13] and gated recurrent [7] neural networks",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    108,
+    685.354
+   ],
+   "width": 395.9985536320008,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "in particular, have been firmly established as state of the art approaches in sequence modeling and",
+   "transform": [
+    10.131964199999999,
+    0,
+    0,
+    9.9626,
+    108,
+    674.445
+   ],
+   "width": 395.9976887927999,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "transduction problems such as language modeling and machine translation [35, 2, 5]. Numerous",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    108,
+    663.536
+   ],
+   "width": 396.00249743600057,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "efforts have since continued to push the boundaries of recurrent language models and encoder-decoder",
+   "transform": [
+    9.763348,
+    0,
+    0,
+    9.9626,
+    108,
+    652.627
+   ],
+   "width": 396.1673717959998,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "architectures [38, 24, 15].",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    108,
+    641.718
+   ],
+   "width": 102.365715,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "Recurrent models typically factor computation along the symbol positions of the input and output",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    108,
+    625.329
+   ],
+   "width": 395.9972105879996,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "sequences. Aligning the positions to steps in computation time, they generate a sequence of hidden",
+   "transform": [
+    10.0024504,
+    0,
+    0,
+    9.9626,
+    108,
+    614.42
+   ],
+   "width": 395.997011336,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "states",
+   "transform": [
+    9.862974,
+    0,
+    0,
+    9.9626,
+    108,
+    603.511
+   ],
+   "width": 21.915528228,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": " ",
+   "transform": [
+    9.862974,
+    0,
+    0,
+    9.9626,
+    129.91552822799997,
+    603.511
+   ],
+   "width": 2.490471772000035,
+   "height": 0,
+   "hasEOL": false
+  },
+  {
+   "str": "h",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    132.406,
+    603.511
+   ],
+   "width": 5.74045012,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "t",
+   "transform": [
+    6.9738,
+    0,
+    0,
+    6.9738,
+    138.14600000000002,
+    602.0169999999999
+   ],
+   "width": 3.00989208,
+   "height": 6.9738,
+   "hasEOL": false
+  },
+  {
+   "str": ", as a function of the previous hidden state",
+   "transform": [
+    9.862974,
+    0,
+    0,
+    9.9626,
+    141.654,
+    603.511
+   ],
+   "width": 166.77302736600004,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": " ",
+   "transform": [
+    9.862974,
+    0,
+    0,
+    9.9626,
+    308.427027366,
+    603.511
+   ],
+   "width": 2.493972633999988,
+   "height": 0,
+   "hasEOL": false
+  },
+  {
+   "str": "h",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    310.921,
+    603.511
+   ],
+   "width": 5.74045012,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "t",
+   "transform": [
+    6.9738,
+    0,
+    0,
+    6.9738,
+    316.661,
+    602.0169999999999
+   ],
+   "width": 3.00989208,
+   "height": 6.9738,
+   "hasEOL": false
+  },
+  {
+   "str": "−",
+   "transform": [
+    6.9738,
+    0,
+    0,
+    6.9738,
+    319.67,
+    602.0169999999999
+   ],
+   "width": 6.2269060199999995,
+   "height": 6.9738,
+   "hasEOL": false
+  },
+  {
+   "str": "1",
+   "transform": [
+    6.9738,
+    0,
+    0,
+    6.9738,
+    325.897,
+    602.0169999999999
+   ],
+   "width": 3.9715790999999996,
+   "height": 6.9738,
+   "hasEOL": false
+  },
+  {
+   "str": " ",
+   "transform": [
+    6.9738,
+    0,
+    0,
+    6.9738,
+    329.8685791,
+    602.0169999999999
+   ],
+   "width": 3.018606969697021,
+   "height": 0,
+   "hasEOL": false
+  },
+  {
+   "str": "and the input for position",
+   "transform": [
+    9.862974,
+    0,
+    0,
+    9.9626,
+    332.857,
+    603.511
+   ],
+   "width": 99.82315985400001,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": " ",
+   "transform": [
+    9.862974,
+    0,
+    0,
+    9.9626,
+    432.68015985400007,
+    603.511
+   ],
+   "width": 2.4938401459999113,
+   "height": 0,
+   "hasEOL": false
+  },
+  {
+   "str": "t",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    435.174,
+    603.511
+   ],
+   "width": 3.5974948600000003,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": ". This inherently",
+   "transform": [
+    9.862974,
+    0,
+    0,
+    9.9626,
+    438.772,
+    603.511
+   ],
+   "width": 65.57891412599996,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "sequential nature precludes parallelization within training examples, which becomes critical at longer",
+   "transform": [
+    9.763348,
+    0,
+    0,
+    9.9626,
+    108,
+    592.602
+   ],
+   "width": 396.16737179599977,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "sequence lengths, as memory constraints limit batching across examples. Recent work has achieved",
+   "transform": [
+    9.9327122,
+    0,
+    0,
+    9.9626,
+    108,
+    581.693
+   ],
+   "width": 395.9973699895999,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "significant improvements in computational efficiency through factorization tricks [21] and conditional",
+   "transform": [
+    9.763348,
+    0,
+    0,
+    9.9626,
+    108,
+    570.784
+   ],
+   "width": 395.9971487800002,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "computation [32], while also improving model performance in case of the latter. The fundamental",
+   "transform": [
+    10.1419268,
+    0,
+    0,
+    9.9626,
+    108,
+    559.875
+   ],
+   "width": 395.999492098,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "constraint of sequential computation, however, remains.",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    108,
+    548.966
+   ],
+   "width": 222.52463360000016,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "Attention mechanisms have become an integral part of compelling sequence modeling and transduc-",
+   "transform": [
+    9.9028244,
+    0,
+    0,
+    9.9626,
+    107.641,
+    532.577
+   ],
+   "width": 398.0143182847999,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "tion models in various tasks, allowing modeling of dependencies without regard to their distance in",
+   "transform": [
+    10.0024504,
+    0,
+    0,
+    9.9626,
+    108,
+    521.668
+   ],
+   "width": 395.99701133599956,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "the input or output sequences [2, 19]. In all but a few cases [27], however, such attention mechanisms",
+   "transform": [
+    9.763348,
+    0,
+    0,
+    9.9626,
+    108,
+    510.759
+   ],
+   "width": 395.99916959600034,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "are used in conjunction with a recurrent network.",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    108,
+    499.85
+   ],
+   "width": 195.78501520000003,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "In this work we propose the Transformer, a model architecture eschewing recurrence and instead",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    108,
+    483.461
+   ],
+   "width": 395.99721058799986,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "relying entirely on an attention mechanism to draw global dependencies between input and output.",
+   "transform": [
+    10.1020764,
+    0,
+    0,
+    9.9626,
+    108,
+    472.552
+   ],
+   "width": 397.73895202079945,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "The Transformer allows for significantly more parallelization and can reach a new state of the art in",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    107.691,
+    461.643
+   ],
+   "width": 396.3122280000002,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "translation quality after being trained for as little as twelve hours on eight P100 GPUs.",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    108,
+    450.734
+   ],
+   "width": 344.357269,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    11.9552,
+    0,
+    0,
+    11.9552,
+    108,
+    419.724
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "2",
+   "transform": [
+    11.9552,
+    0,
+    0,
+    11.9552,
+    108,
+    419.724
+   ],
+   "width": 5.9776,
+   "height": 11.9552,
+   "hasEOL": false
+  },
+  {
+   "str": " ",
+   "transform": [
+    11.9552,
+    0,
+    0,
+    11.9552,
+    113.9776,
+    419.724
+   ],
+   "width": 11.955200000000005,
+   "height": 0,
+   "hasEOL": false
+  },
+  {
+   "str": "Background",
+   "transform": [
+    11.9552,
+    0,
+    0,
+    11.9552,
+    125.9328,
+    419.724
+   ],
+   "width": 62.896307199999995,
+   "height": 11.9552,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    9.8430488,
+    0,
+    0,
+    9.9626,
+    107.691,
+    395.041
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "The goal of reducing sequential computation also forms the foundation of the Extended Neural GPU",
+   "transform": [
+    9.8430488,
+    0,
+    0,
+    9.9626,
+    107.691,
+    395.041
+   ],
+   "width": 396.3106738343997,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "[16], ByteNet [18] and ConvS2S [9], all of which use convolutional neural networks as basic building",
+   "transform": [
+    9.763348,
+    0,
+    0,
+    9.9626,
+    108,
+    384.132
+   ],
+   "width": 396.0028835879999,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "block, computing hidden representations in parallel for all input and output positions. In these models,",
+   "transform": [
+    9.763348,
+    0,
+    0,
+    9.9626,
+    108,
+    373.223
+   ],
+   "width": 397.2413400759998,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "the number of operations required to relate signals from two arbitrary input or output positions grows",
+   "transform": [
+    9.763348,
+    0,
+    0,
+    9.9626,
+    108,
+    362.313
+   ],
+   "width": 396.0013948799994,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "in the distance between positions, linearly for ConvS2S and logarithmically for ByteNet. This makes",
+   "transform": [
+    9.7932358,
+    0,
+    0,
+    9.9626,
+    108,
+    351.404
+   ],
+   "width": 395.9992828087997,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "it more difficult to learn dependencies between distant positions [12]. In the Transformer this is",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    108,
+    340.495
+   ],
+   "width": 395.99743650400063,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "reduced to a constant number of operations, albeit at the cost of reduced effective resolution due",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    108,
+    329.586
+   ],
+   "width": 395.9972105879999,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "to averaging attention-weighted positions, an effect we counteract with Multi-Head Attention as",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    108,
+    318.677
+   ],
+   "width": 395.9972105879997,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "described in section 3.2.",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    108,
+    307.768
+   ],
+   "width": 96.56748179999998,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "Self-attention, sometimes called intra-attention is an attention mechanism relating different positions",
+   "transform": [
+    9.8231236,
+    0,
+    0,
+    9.9626,
+    108,
+    291.379
+   ],
+   "width": 395.9995816867997,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "of a single sequence in order to compute a representation of the sequence. Self-attention has been",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    108,
+    280.47
+   ],
+   "width": 395.9972105880001,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "used successfully in a variety of tasks including reading comprehension, abstractive summarization,",
+   "transform": [
+    9.9526374,
+    0,
+    0,
+    9.9626,
+    108,
+    269.561
+   ],
+   "width": 397.2495691835999,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "textual entailment and learning task-independent sentence representations [4, 27, 28, 22].",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    108,
+    258.652
+   ],
+   "width": 355.116877,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "End-to-end memory networks are based on a recurrent attention mechanism instead of sequence-",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    108,
+    242.264
+   ],
+   "width": 397.65359246399987,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "aligned recurrence and have been shown to perform well on simple-language question answering and",
+   "transform": [
+    9.7733106,
+    0,
+    0,
+    9.9626,
+    108,
+    231.355
+   ],
+   "width": 395.99499889079954,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "language modeling tasks [34].",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    108,
+    220.445
+   ],
+   "width": 120.0891804,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "To the best of our knowledge, however, the Transformer is the first transduction model relying",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    107.691,
+    204.057
+   ],
+   "width": 396.3122279999997,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "entirely on self-attention to compute representations of its input and output without using sequence-",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    108,
+    193.148
+   ],
+   "width": 397.65717899999964,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "aligned RNNs or convolution. In the following sections, we will describe the Transformer, motivate",
+   "transform": [
+    9.9327122,
+    0,
+    0,
+    9.9626,
+    108,
+    182.239
+   ],
+   "width": 395.9973699895998,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "self-attention and discuss its advantages over models such as [17, 18] and [9].",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    108,
+    171.33
+   ],
+   "width": 309.3486926000002,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    11.9552,
+    0,
+    0,
+    11.9552,
+    108,
+    140.32000000000002
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "3",
+   "transform": [
+    11.9552,
+    0,
+    0,
+    11.9552,
+    108,
+    140.32000000000002
+   ],
+   "width": 5.9776,
+   "height": 11.9552,
+   "hasEOL": false
+  },
+  {
+   "str": " ",
+   "transform": [
+    11.9552,
+    0,
+    0,
+    11.9552,
+    113.9776,
+    140.32000000000002
+   ],
+   "width": 11.955200000000005,
+   "height": 0,
+   "hasEOL": false
+  },
+  {
+   "str": "Model Architecture",
+   "transform": [
+    11.9552,
+    0,
+    0,
+    11.9552,
+    125.9328,
+    140.32000000000002
+   ],
+   "width": 100.1606656,
+   "height": 11.9552,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    9.912787,
+    0,
+    0,
+    9.9626,
+    108,
+    115.636
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "Most competitive neural sequence transduction models have an encoder-decoder structure [5, 2, 35].",
+   "transform": [
+    9.912787,
+    0,
+    0,
+    9.9626,
+    108,
+    115.636
+   ],
+   "width": 397.7431548209997,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "Here, the encoder maps an input sequence of symbol representations",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    108,
+    104.727
+   ],
+   "width": 286.625197512,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": " ",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    394.6251975119995,
+    104.727
+   ],
+   "width": 3.3798024880005073,
+   "height": 0,
+   "hasEOL": false
+  },
+  {
+   "str": "(",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    398.005,
+    104.727
+   ],
+   "width": 3.87445514,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "x",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    401.879,
+    104.727
+   ],
+   "width": 5.6936259,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "1",
+   "transform": [
+    6.9738,
+    0,
+    0,
+    6.9738,
+    407.57300000000004,
+    103.233
+   ],
+   "width": 3.9715790999999996,
+   "height": 6.9738,
+   "hasEOL": false
+  },
+  {
+   "str": ", ..., x",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    412.04200000000003,
+    104.727
+   ],
+   "width": 22.849223100000003,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "n",
+   "transform": [
+    6.9738,
+    0,
+    0,
+    6.9738,
+    434.894,
+    103.233
+   ],
+   "width": 4.92489756,
+   "height": 6.9738,
+   "hasEOL": false
+  },
+  {
+   "str": ")",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    440.317,
+    104.727
+   ],
+   "width": 3.87445514,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": " ",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    444.19145514,
+    104.727
+   ],
+   "width": 3.316220450980388,
+   "height": 0,
+   "hasEOL": false
+  },
+  {
+   "str": "to a sequence",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    447.574,
+    104.727
+   ],
+   "width": 56.42876415599995,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "of continuous representations",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    108,
+    93.818
+   ],
+   "width": 121.96254770400006,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": " ",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    229.96254770400006,
+    93.818
+   ],
+   "width": 3.695452295999928,
+   "height": 0,
+   "hasEOL": false
+  },
+  {
+   "str": "z",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    233.658,
+    93.818
+   ],
+   "width": 5.09188486,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": " ",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    238.74988485999998,
+    93.818
+   ],
+   "width": 4.991115140000005,
+   "height": 0,
+   "hasEOL": false
+  },
+  {
+   "str": "= (",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    243.74099999999999,
+    93.818
+   ],
+   "width": 16.614628019999998,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "z",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    260.354,
+    93.818
+   ],
+   "width": 4.63360526,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "1",
+   "transform": [
+    6.9738,
+    0,
+    0,
+    6.9738,
+    264.988,
+    92.324
+   ],
+   "width": 3.9715790999999996,
+   "height": 6.9738,
+   "hasEOL": false
+  },
+  {
+   "str": ", ..., z",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    269.457,
+    93.818
+   ],
+   "width": 21.789202460000002,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "n",
+   "transform": [
+    6.9738,
+    0,
+    0,
+    6.9738,
+    291.248,
+    92.324
+   ],
+   "width": 4.92489756,
+   "height": 6.9738,
+   "hasEOL": false
+  },
+  {
+   "str": ")",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    296.671,
+    93.818
+   ],
+   "width": 3.87445514,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": ".",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    300.545,
+    93.818
+   ],
+   "width": 2.540463,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": " ",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    303.085463,
+    93.818
+   ],
+   "width": 6.555390799999994,
+   "height": 0,
+   "hasEOL": false
+  },
+  {
+   "str": "Given",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    309.771961616,
+    93.818
+   ],
+   "width": 24.439254060000003,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": " ",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    334.21121567599994,
+    93.818
+   ],
+   "width": 3.6927843240000584,
+   "height": 0,
+   "hasEOL": false
+  },
+  {
+   "str": "z",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    337.904,
+    93.818
+   ],
+   "width": 5.09188486,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": ", the decoder then generates an output",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    342.996,
+    93.818
+   ],
+   "width": 161.00438308800014,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "sequence",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    108,
+    82.909
+   ],
+   "width": 37.24318758,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": " ",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    145.24318758,
+    82.909
+   ],
+   "width": 2.558812419999981,
+   "height": 0,
+   "hasEOL": false
+  },
+  {
+   "str": "(",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    147.802,
+    82.909
+   ],
+   "width": 3.87445514,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "y",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    151.676,
+    82.909
+   ],
+   "width": 4.88466278,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "1",
+   "transform": [
+    6.9738,
+    0,
+    0,
+    6.9738,
+    156.56099999999998,
+    81.415
+   ],
+   "width": 3.9715790999999996,
+   "height": 6.9738,
+   "hasEOL": false
+  },
+  {
+   "str": ", ..., y",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    161.02999999999997,
+    82.909
+   ],
+   "width": 22.040259980000002,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": "m",
+   "transform": [
+    6.9738,
+    0,
+    0,
+    6.9738,
+    183.07299999999998,
+    81.415
+   ],
+   "width": 7.06934106,
+   "height": 6.9738,
+   "hasEOL": false
+  },
+  {
+   "str": ")",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    190.64,
+    82.909
+   ],
+   "width": 3.87445514,
+   "height": 9.9626,
+   "hasEOL": false
+  },
+  {
+   "str": " ",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    194.51445514,
+    82.909
+   ],
+   "width": 2.5093577058823695,
+   "height": 0,
+   "hasEOL": false
+  },
+  {
+   "str": "of symbols one element at a time. At each step the model is auto-regressive",
+   "transform": [
+    10.161852,
+    0,
+    0,
+    9.9626,
+    197.074,
+    82.909
+   ],
+   "width": 306.9285778080001,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "[10], consuming the previously generated symbols as additional input when generating the next.",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    108,
+    72
+   ],
+   "width": 382.5638399999999,
+   "height": 9.9626,
+   "hasEOL": true
+  },
+  {
+   "str": "2",
+   "transform": [
+    9.9626,
+    0,
+    0,
+    9.9626,
+    303.509,
+    42.111999999999995
+   ],
+   "width": 4.9813,
+   "height": 9.9626,
+   "hasEOL": false
+  }
+ ]
+}

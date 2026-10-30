@@ -1,0 +1,64 @@
+/* Reason: PDF.js 6 TextLayer emits CSS variables for glyph scaling and rotation. */
+.pdf-text-layer {
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  line-height: 1;
+  text-align: initial;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  color-scheme: only light;
+  overflow: clip;
+  cursor: text;
+  transform-origin: 0 0;
+}
+
+.pdf-text-layer :is(span, br) {
+  position: absolute;
+  white-space: pre;
+  color: transparent;
+  transform-origin: 0 0;
+  user-select: text;
+}
+
+.pdf-text-layer > :not(.markedContent),
+.pdf-text-layer .markedContent span:not(.markedContent) {
+  --font-height: 0;
+  --scale-x: 1;
+  --rotate: 0deg;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+
+.pdf-text-layer .markedContent { display: contents; }
+.pdf-text-layer[data-main-rotation="90"] { transform: rotate(90deg) translateY(-100%); }
+.pdf-text-layer[data-main-rotation="180"] { transform: rotate(180deg) translate(-100%, -100%); }
+.pdf-text-layer[data-main-rotation="270"] { transform: rotate(270deg) translateX(-100%); }
+.pdf-text-layer ::selection { background: rgba(0, 100, 255, 0.25); }
+.pdf-text-layer br::selection { background: transparent; }
+
+/* Note connector — draws in along the path, then the anchor dot pops.
+   Reason: pathLength={1} on the <path> normalizes dash units, so the
+   dashoffset 1→0 keyframe works without knowing the rendered length. */
+@keyframes connector-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+.note-connector-path {
+  stroke-dasharray: 1;
+  animation: connector-draw 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes connector-dot-pop {
+  from { opacity: 0; transform: scale(0); }
+  to { opacity: 1; transform: scale(1); }
+}
+.note-connector-dot {
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: connector-dot-pop 0.25s ease-out 0.3s both;
+}

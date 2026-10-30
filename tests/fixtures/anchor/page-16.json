@@ -1,0 +1,1391 @@
+{
+ "page": 16,
+ "items": [
+  {
+   "str": "1",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    688
+   ],
+   "width": 5.0040000000000004,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "2",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    677
+   ],
+   "width": 5.0040000000000004,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "3",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    666
+   ],
+   "width": 5.0040000000000004,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "4",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    655
+   ],
+   "width": 5.0040000000000004,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "5",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    644
+   ],
+   "width": 5.0040000000000004,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "6",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    633
+   ],
+   "width": 5.0040000000000004,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "7",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    622
+   ],
+   "width": 5.0040000000000004,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "8",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    611
+   ],
+   "width": 5.0040000000000004,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "9",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    600
+   ],
+   "width": 5.0040000000000004,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "10",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    589
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "11",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    578
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "12",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    567
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "13",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    556
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "14",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    545
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "15",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    534
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "16",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    523
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "17",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    512
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "18",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    501
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "19",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    490
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "20",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    479
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "21",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    468
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "22",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    457
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "23",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    446
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "24",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    435
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "25",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    424
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "26",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    413
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "27",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    402
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "28",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    391
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "29",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    380
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "30",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    369
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "31",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    358
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "32",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    347
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "33",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    336
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "34",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    325
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "35",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    314
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "36",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    303
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "37",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    292
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "38",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    281
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "39",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    270
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "40",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    259
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "41",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    248
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "42",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    237
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "43",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    226
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "44",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    215
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "45",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    204
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "46",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    193
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "47",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    182
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "48",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    171
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "49",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    160
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "50",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    149
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "51",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    138
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "52",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    47,
+    127
+   ],
+   "width": 10.008000000000001,
+   "height": 9,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    688
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "Appendix A: Synthetic Anchoring Supplement",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    688
+   ],
+   "width": 197.52300000000002,
+   "height": 9,
+   "hasEOL": false
+  },
+  {
+   "str": "",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    677
+   ],
+   "width": 0,
+   "height": 0,
+   "hasEOL": true
+  },
+  {
+   "str": "SYNTHETIC FIXTURE AUTHORS AND AFFILIATIONS",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    677
+   ],
+   "width": 223.0290000000001,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "This supplemental page is a synthetic construction that reproduces the review-stage gutter layout, which",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    655
+   ],
+   "width": 414.6840000000005,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "camera-ready formats omit before publication. The numbered gutter along the left edge interleaves line",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    644
+   ],
+   "width": 409.1850000000004,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "digits into the projected reading order, while the geometric page stream omits them entirely, and every",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    633
+   ],
+   "width": 406.1700000000004,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "anchoring decision must tolerate that divergence without silently drifting onto a neighboring line.",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    622
+   ],
+   "width": 380.17800000000034,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "Interleaved digits stress the sequential alignment walk [1, 2] because a pure digit run exists nowhere on the",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    600
+   ],
+   "width": 426.7080000000005,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "page and must be stepped over so the prose after it still anchors [3]. Coverage thresholds absorb a",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    589
+   ],
+   "width": 394.2000000000005,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "bounded amount of this noise, but a genuine reordering of table cells still degrades the affected quote to",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    578
+   ],
+   "width": 413.73900000000043,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "page level rather than anchoring it onto the wrong glyphs.",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    567
+   ],
+   "width": 229.122,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "Across the pilot sessions this design reduced the annotation workload to",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    545
+   ],
+   "width": 287.64,
+   "height": 9,
+   "hasEOL": false
+  },
+  {
+   "str": " ",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    360.64000000000027,
+    545
+   ],
+   "width": 2.5019999999997253,
+   "height": 0,
+   "hasEOL": false
+  },
+  {
+   "str": "sixteen verbatim quotes per",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    363.142,
+    545
+   ],
+   "width": 119.53800000000003,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "annotator",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    534
+   ],
+   "width": 41.49900000000001,
+   "height": 9,
+   "hasEOL": false
+  },
+  {
+   "str": " ",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    114.499,
+    534
+   ],
+   "width": 2.5019999999999953,
+   "height": 0,
+   "hasEOL": false
+  },
+  {
+   "str": "in every session, a pace that kept the coders attentive while still finishing each batch within one",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    117.00099999999999,
+    534
+   ],
+   "width": 378.1800000000003,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "afternoon.",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    523
+   ],
+   "width": 40.527,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "A deliberate hyphenation across the line boundary, as in interleaved-",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    501
+   ],
+   "width": 273.636,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "digits and margin-aware spans, must reunify during normalization so that a quote copied from either view resolves to the same page spa",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    490
+   ],
+   "width": 542.2320000000005,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "The remaining rows are filler prose so that every numbered line of the gutter has body text at the same",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    468
+   ],
+   "width": 408.1860000000005,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "height, keeping the extraction order stable across viewers. Nothing in this paragraph carries semantic",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    457
+   ],
+   "width": 403.1640000000004,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "weight; it exists so the geometry stays dense.",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    446
+   ],
+   "width": 181.08000000000004,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "Filler passage 1: the gutter keeps counting while the body keeps wrapping, and the alignment keeps",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    424
+   ],
+   "width": 398.2050000000004,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "walking. The remaining rows are filler prose so that every numbered line of the gutter has body text at the",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    413
+   ],
+   "width": 418.6890000000006,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "same height, keeping the extraction order stable across viewers. Nothing in this paragraph carries semantic",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    402
+   ],
+   "width": 427.67100000000045,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "weight; it exists so the geometry stays dense.",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    391
+   ],
+   "width": 181.08000000000004,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "Filler passage 2: the gutter keeps counting while the body keeps wrapping, and the alignment keeps",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    369
+   ],
+   "width": 398.2050000000004,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "walking. The remaining rows are filler prose so that every numbered line of the gutter has body text at the",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    358
+   ],
+   "width": 418.6890000000006,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "same height, keeping the extraction order stable across viewers. Nothing in this paragraph carries semantic",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    347
+   ],
+   "width": 427.67100000000045,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "weight; it exists so the geometry stays dense.",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    336
+   ],
+   "width": 181.08000000000004,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "Filler passage 3: the gutter keeps counting while the body keeps wrapping, and the alignment keeps",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    314
+   ],
+   "width": 398.2050000000004,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "walking. The remaining rows are filler prose so that every numbered line of the gutter has body text at the",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    303
+   ],
+   "width": 418.6890000000006,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "same height, keeping the extraction order stable across viewers. Nothing in this paragraph carries semantic",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    292
+   ],
+   "width": 427.67100000000045,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "weight; it exists so the geometry stays dense.",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    281
+   ],
+   "width": 181.08000000000004,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "Filler passage 4: the gutter keeps counting while the body keeps wrapping, and the alignment keeps",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    259
+   ],
+   "width": 398.2050000000004,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "walking. The remaining rows are filler prose so that every numbered line of the gutter has body text at the",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    248
+   ],
+   "width": 418.6890000000006,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "same height, keeping the extraction order stable across viewers. Nothing in this paragraph carries semantic",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    237
+   ],
+   "width": 427.67100000000045,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "weight; it exists so the geometry stays dense.",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    226
+   ],
+   "width": 181.08000000000004,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "Filler passage 5: the gutter keeps counting while the body keeps wrapping, and the alignment keeps",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    204
+   ],
+   "width": 398.2050000000004,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "walking. The remaining rows are filler prose so that every numbered line of the gutter has body text at the",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    193
+   ],
+   "width": 418.6890000000006,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "same height, keeping the extraction order stable across viewers. Nothing in this paragraph carries semantic",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    182
+   ],
+   "width": 427.67100000000045,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "weight; it exists so the geometry stays dense.",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    171
+   ],
+   "width": 181.08000000000004,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "Filler passage 6: the gutter keeps counting while the body keeps wrapping, and the alignment keeps",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    149
+   ],
+   "width": 398.2050000000004,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "walking. The remaining rows are filler prose so that every numbered line of the gutter has body text at the",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    138
+   ],
+   "width": 418.6890000000006,
+   "height": 9,
+   "hasEOL": true
+  },
+  {
+   "str": "same height, keeping the extraction order stable across viewers. Nothing in this paragraph carries semantic",
+   "transform": [
+    9,
+    0,
+    0,
+    9,
+    73,
+    127
+   ],
+   "width": 427.67100000000045,
+   "height": 9,
+   "hasEOL": false
+  }
+ ]
+}

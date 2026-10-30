@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>Sidekick 输入引擎手动靶场</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font: 14px/1.5 -apple-system, system-ui, sans-serif; margin: 0; padding: 20px; background: #f6f7f9; color: #1c1c1e; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .hint { color: #666; font-size: 12px; margin-bottom: 16px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  .card { background: #fff; border: 1px solid #e2e4e8; border-radius: 10px; padding: 14px; }
+  .card h2 { font-size: 13px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: .04em; color: #666; }
+  .verdict { margin-top: 10px; font-size: 12px; font-family: ui-monospace, Menlo, monospace; }
+  .pass { color: #0a7c2f; }
+  .fail { color: #c30d23; }
+  .idle { color: #999; }
+  button { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid #c9ccd1; background: #fff; cursor: pointer; }
+  input, textarea { font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid #c9ccd1; width: 100%; }
+  #log { grid-column: 1 / -1; background: #14161a; color: #d6dae0; border-radius: 10px; padding: 12px;
+         font: 12px/1.45 ui-monospace, Menlo, monospace; height: 260px; overflow: auto; white-space: pre-wrap; }
+  #log .t { color: #6ea8fe; }
+  #log .n { color: #7ee787; }
+  #canvas { width: 100%; height: 120px; background: #eef1f5; border-radius: 8px; display: block; }
+  #editable { min-height: 60px; border: 1px solid #c9ccd1; border-radius: 8px; padding: 8px 10px; background: #fff; }
+  .row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  iframe { width: 100%; height: 130px; border: 1px solid #c9ccd1; border-radius: 8px; background: #fff; }
+</style>
+</head>
+<body>
+<h1>Sidekick 输入引擎手动靶场</h1>
+<div class="hint">每张卡片下方的 verdict 就是判定结果。绿色 = 高保真合成生效，红色 = 退化到旧行为。</div>
+
+<div class="grid">
+
+  <!-- 1. mousedown-only：旧实现的 el.click() 完全触发不了 -->
+  <div class="card">
+    <h2>1 · 只监听 mousedown 的弹层</h2>
+    <button id="dd">打开菜单</button>
+    <div id="ddPanel" style="display:none;margin-top:8px;padding:8px;background:#eef1f5;border-radius:6px">
+      菜单已展开
+    </div>
+    <div class="verdict idle" id="v1">等待 click</div>
+  </div>
+
+  <!-- 2. 坐标：旧实现所有 MouseEvent 的 clientX/Y 都是 0 -->
+  <div class="card">
+    <h2>2 · 坐标与事件序列</h2>
+    <button id="coord">读取坐标</button>
+    <div class="verdict idle" id="v2">等待 click</div>
+  </div>
+
+  <!-- 3. React value tracker：旧实现 el.value += 绕过 setter，onChange 不触发 -->
+  <div class="card">
+    <h2>3 · 受控输入（React value tracker）</h2>
+    <input id="controlled" placeholder="搜索…">
+    <div class="verdict idle" id="v3">等待 type</div>
+  </div>
+
+  <!-- 4. beforeinput / 逐字符 -->
+  <div class="card">
+    <h2>4 · contenteditable 富文本</h2>
+    <div id="editable" contenteditable="true"></div>
+    <div class="verdict idle" id="v4">等待 type</div>
+  </div>
+
+  <!-- 5. hover 链与 mousemove 轨迹 -->
+  <div class="card">
+    <h2>5 · hover 链与轨迹</h2>
+    <div id="outer" style="padding:14px;background:#eef1f5;border-radius:8px">
+      outer
+      <div id="inner" style="margin-top:8px;padding:14px;background:#dde3ec;border-radius:6px">inner（hover 我）</div>
+    </div>
+    <div class="verdict idle" id="v5">等待 hover</div>
+  </div>
+
+  <!-- 6. canvas：只读坐标，最能暴露 0,0 -->
+  <div class="card">
+    <h2>6 · canvas 坐标</h2>
+    <canvas id="canvas"></canvas>
+    <div class="verdict idle" id="v6">等待 hover / click</div>
+  </div>
+
+  <!-- 7. keypress -->
+  <div class="card">
+    <h2>7 · keypress（keyCode / 修饰键）</h2>
+    <input id="keys" placeholder="按键落在这里">
+    <div class="verdict idle" id="v7">等待 keypress</div>
+  </div>
+
+  <!-- 8. iframe 内目标 -->
+  <div class="card">
+    <h2>8 · iframe 内的按钮</h2>
+    <iframe id="frame"></iframe>
+    <div class="verdict idle" id="v8">在 iframe 内点击「帧内按钮」</div>
+  </div>
+
+  <!-- 9. 可渲染性门 -->
+  <div class="card">
+    <h2>9 · 可渲染性（该拦的拦、该放的放）</h2>
+    <div style="position:relative">
+      <button id="hid-display" style="display:none">藏起来-display</button>
+      <div style="display:none"><button id="hid-parent">藏起来-祖先</button></div>
+      <button id="hid-offpage" style="position:absolute;left:-9999px;top:0">藏起来-离页</button>
+      <button id="hid-zero" style="width:0;height:0;padding:0;border:0;overflow:hidden">藏起来-零面积</button>
+      <button id="ok-opacity" style="opacity:0">该点得到-opacity0</button>
+    </div>
+    <div style="font-size:12px;color:#666;margin-top:6px">
+      逐个让 agent 点击这 5 个 id。只有 <code>#ok-opacity</code> 应该成功，其余 4 个应被拒绝并给出原因。
+    </div>
+    <div class="verdict idle" id="v9">等待点击</div>
+  </div>
+
+  <!-- 10. 遮挡上报 -->
+  <div class="card">
+    <h2>10 · 遮挡（事件给最上层，但要说出来）</h2>
+    <div style="position:relative;height:64px">
+      <button id="covered" style="position:absolute;left:0;top:20px">被压住的按钮</button>
+      <div id="banner" class="cookie-banner" style="position:absolute;left:0;top:0;width:220px;height:60px;
+           background:#ffe8a3;border:1px solid #e0b400;border-radius:6px;padding:6px;font-size:12px">
+        cookie 横幅（盖在按钮上）
+      </div>
+    </div>
+    <div style="font-size:12px;color:#666;margin-top:6px">
+      让 agent 点击 <code>#covered</code>。事件应该落在横幅上（真实鼠标也是），
+      但工具返回文本里必须出现 <code>div#banner.cookie-banner</code>。
+    </div>
+    <div class="verdict idle" id="v10">等待点击 #covered</div>
+  </div>
+
+  <div id="log"></div>
+</div>
+
+<script>
+// ---------- 日志 ----------
+const logEl = document.getElementById('log')
+let seq = 0
+function log(type, detail) {
+  seq++
+  const line = document.createElement('div')
+  line.innerHTML = `<span class="n">${String(seq).padStart(3,'0')}</span> <span class="t">${type}</span> ${detail ?? ''}`
+  logEl.appendChild(line)
+  logEl.scrollTop = logEl.scrollHeight
+}
+function verdict(id, ok, text) {
+  const el = document.getElementById(id)
+  el.className = 'verdict ' + (ok ? 'pass' : 'fail')
+  el.textContent = (ok ? '✓ ' : '✗ ') + text
+}
+
+// ---------- 1. mousedown-only 弹层 ----------
+// Reason: 旧实现只派发一个 click 事件，这个监听永远不会被调用。
+const seen1 = new Set()
+for (const t of ['pointerdown','mousedown','pointerup','mouseup','click']) {
+  document.getElementById('dd').addEventListener(t, () => { seen1.add(t); log('dd:' + t) })
+}
+document.getElementById('dd').addEventListener('mousedown', () => {
+  document.getElementById('ddPanel').style.display = 'block'
+})
+document.getElementById('dd').addEventListener('click', () => {
+  const want = ['pointerdown','mousedown','pointerup','mouseup','click']
+  const missing = want.filter(t => !seen1.has(t))
+  verdict('v1', missing.length === 0,
+    missing.length === 0 ? '完整序列：' + want.join(' → ') : '缺失：' + missing.join(', '))
+})
+
+// ---------- 2. 坐标 ----------
+document.getElementById('coord').addEventListener('click', e => {
+  const ok = e.clientX > 0 && e.clientY > 0 && e.view === window && e.isTrusted === false
+  log('coord:click', `clientX=${e.clientX} clientY=${e.clientY} button=${e.button} buttons=${e.buttons} detail=${e.detail} view=${e.view ? 'window' : 'null'}`)
+  verdict('v2', e.clientX > 0 && e.clientY > 0,
+    `clientX/Y = ${e.clientX},${e.clientY}${ok ? '（合成事件，坐标真实）' : ''}`)
+})
+
+// ---------- 3. React value tracker ----------
+// Reason: 复刻 React 的 value tracker。旧实现直接写 el.value，
+// tracker 的 currentValue 不变，React 会判定「没变化」，onChange 不触发。
+const input3 = document.getElementById('controlled')
+;(function installTracker(node) {
+  // Reason: mirrors React's inputValueTracking. The instance-level setter records
+  // every write, so `node.value = x` leaves tracked === value and React's
+  // updateValueIfChanged sees "no change" — that is precisely why the old
+  // implementation never fired onChange. Only a write through the PROTOTYPE's
+  // native setter bypasses this and leaves tracked stale.
+  const desc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')
+  let tracked = node.value
+  Object.defineProperty(node, 'value', {
+    configurable: true,
+    get() { return desc.get.call(this) },
+    set(v) { tracked = String(v); desc.set.call(this, v) },
+  })
+  node.__react = {
+    // Reason: React's updateValueIfChanged — returns whether onChange fires,
+    // and syncs the tracker when it does.
+    changed() {
+      const next = desc.get.call(node)
+      if (next === tracked) return false
+      tracked = next
+      return true
+    },
+  }
+})(input3)
+
+let changeCount = 0, keyCount = 0, beforeInputCount = 0
+input3.addEventListener('keydown', () => { keyCount++ })
+input3.addEventListener('beforeinput', () => { beforeInputCount++ })
+input3.addEventListener('input', () => {
+  const fired = input3.__react.changed()
+  if (fired) changeCount++
+  log('input', `value="${input3.value}" onChange=${fired ? '触发' : '未触发（tracker 未绕过）'}`)
+  verdict('v3', changeCount > 0 && keyCount > 0 && beforeInputCount > 0,
+    `onChange×${changeCount} keydown×${keyCount} beforeinput×${beforeInputCount}`)
+})
+
+// ---------- 4. contenteditable ----------
+const ed = document.getElementById('editable')
+let edBefore = 0
+ed.addEventListener('beforeinput', e => { edBefore++; log('editable:beforeinput', `inputType=${e.inputType} data="${e.data ?? ''}"`) })
+ed.addEventListener('input', () => {
+  verdict('v4', edBefore > 0, `beforeinput×${edBefore} 内容="${ed.textContent}"`)
+})
+
+// ---------- 5. hover 链 ----------
+const chain = []
+for (const [name, node] of [['outer', document.getElementById('outer')], ['inner', document.getElementById('inner')]]) {
+  for (const t of ['pointerover','mouseover','pointerenter','mouseenter','pointerout','mouseout','pointerleave','mouseleave']) {
+    node.addEventListener(t, e => {
+      // Reason: enter/leave 不冒泡，只有真的逐个派发才会被子元素监听到。
+      if (e.target !== node && (t.includes('enter') || t.includes('leave'))) return
+      chain.push(name + ':' + t)
+      log('hover', name + ':' + t)
+    })
+  }
+}
+let moveCount = 0
+document.getElementById('inner').addEventListener('mousemove', e => {
+  moveCount++
+  const hasCoords = e.clientX > 0 && e.clientY > 0
+  verdict('v5', moveCount > 1 && chain.length > 0 && hasCoords,
+    `mousemove×${moveCount}（>1 说明有轨迹）链事件×${chain.length} 坐标=${e.clientX},${e.clientY}`)
+})
+
+// ---------- 6. canvas ----------
+const cv = document.getElementById('canvas')
+const ctx = cv.getContext('2d')
+function sizeCanvas() {
+  const r = cv.getBoundingClientRect()
+  cv.width = r.width * devicePixelRatio
+  cv.height = r.height * devicePixelRatio
+  ctx.scale(devicePixelRatio, devicePixelRatio)
+}
+sizeCanvas()
+addEventListener('resize', sizeCanvas)
+const trail = []
+function paint() {
+  const r = cv.getBoundingClientRect()
+  ctx.clearRect(0, 0, r.width, r.height)
+  ctx.strokeStyle = '#6ea8fe'; ctx.lineWidth = 2; ctx.beginPath()
+  trail.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y))
+  ctx.stroke()
+  for (const p of trail) { ctx.fillStyle = '#0a84ff'; ctx.fillRect(p.x - 1.5, p.y - 1.5, 3, 3) }
+}
+cv.addEventListener('mousemove', e => {
+  const r = cv.getBoundingClientRect()
+  trail.push({ x: e.clientX - r.left, y: e.clientY - r.top })
+  if (trail.length > 200) trail.shift()
+  paint()
+  verdict('v6', trail.length > 1, `采样点 ${trail.length} 个（画出轨迹说明坐标真实且逐点派发）`)
+})
+cv.addEventListener('mousedown', e => log('canvas:mousedown', `${e.clientX},${e.clientY}`))
+
+// ---------- 7. keypress ----------
+document.getElementById('keys').addEventListener('keydown', e => {
+  log('keydown', `key=${e.key} code=${e.code} keyCode=${e.keyCode} which=${e.which} ctrl=${e.ctrlKey} shift=${e.shiftKey} composed=${e.composed}`)
+  verdict('v7', e.keyCode > 0 && !!e.code && e.composed,
+    `key=${e.key} code=${e.code} keyCode=${e.keyCode} composed=${e.composed}`)
+})
+
+// ---------- 8. iframe ----------
+document.getElementById('frame').srcdoc = `
+<style>body{font:14px system-ui;padding:12px;margin:0}
+button{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid #c9ccd1;background:#fff}
+#out{margin-top:10px;font:12px ui-monospace,Menlo,monospace;color:#666}</style>
+<button id="b">帧内按钮</button><div id="out">等待 click</div>
+<script>
+const seen = new Set()
+for (const t of ['pointerdown','mousedown','pointerup','mouseup','click'])
+  document.getElementById('b').addEventListener(t, () => seen.add(t))
+document.getElementById('b').addEventListener('click', e => {
+  const want = ['pointerdown','mousedown','pointerup','mouseup','click']
+  const missing = want.filter(t => !seen.has(t))
+  const ok = missing.length === 0 && e.clientX > 0
+  document.getElementById('out').textContent =
+    (ok ? '✓ ' : '✗ ') + 'frame-local 坐标=' + e.clientX + ',' + e.clientY +
+    (missing.length ? ' 缺失:' + missing.join(',') : ' 序列完整')
+  document.getElementById('out').style.color = ok ? '#0a7c2f' : '#c30d23'
+  parent.postMessage({ sk: 1, ok, missing, x: e.clientX, y: e.clientY }, '*')
+})
+<\/script>`
+addEventListener('message', e => {
+  if (!e.data || e.data.sk !== 1) return
+  log('iframe:click', `frame-local ${e.data.x},${e.data.y}`)
+  verdict('v8', e.data.ok,
+    e.data.ok ? `序列完整，frame-local 坐标 ${e.data.x},${e.data.y}` : '缺失：' + e.data.missing.join(', '))
+})
+
+// ---------- 9. 可渲染性门 ----------
+// Reason: 未渲染的元素没有命中测试，事件送不到 —— 但 opacity:0 照样可命中，
+// sr-only 的真 input 就是这么藏的，拦掉它会打断自定义 checkbox 和上传控件。
+const fired9 = new Set()
+for (const id of ['hid-display', 'hid-parent', 'hid-offpage', 'hid-zero', 'ok-opacity']) {
+  document.getElementById(id).addEventListener('click', () => {
+    fired9.add(id)
+    log('vis:click', id)
+    const leaked = [...fired9].filter(x => x !== 'ok-opacity')
+    verdict('v9', leaked.length === 0 && fired9.has('ok-opacity'),
+      leaked.length
+        ? `不该被点到: ${leaked.join(', ')}`
+        : `只有 opacity:0 收到点击（正确）`)
+  })
+}
+
+// ---------- 10. 遮挡上报 ----------
+// Reason: 派发给最上层元素是对的（真实鼠标同样打到横幅），页面这边只能验证
+// 这一点；「返回文本是否点名了遮挡者」得看工具输出，靶场看不到。
+document.getElementById('banner').addEventListener('click', () => {
+  log('occl:banner', '横幅收到点击')
+  verdict('v10', true, '横幅收到事件（语义正确）— 现在检查工具返回是否点名 div#banner.cookie-banner')
+})
+document.getElementById('covered').addEventListener('click', () => {
+  log('occl:button', '按钮收到点击')
+  verdict('v10', false, '按钮收到了事件 — 说明没有按最上层命中派发')
+})
+
+// ---------- overlay 泄漏自查 ----------
+// Reason: 指针 / 锁指示器都挂在 documentElement 上，不该出现在页面自己的
+// body 查询里，也不该被 dom 快照索引到。
+window.skOverlayLeak = () => {
+  const sel = '[data-sidekick-overlay], [data-sidekick-picker], #__sidekick_lock_indicator__, #__sidekick_ai_pointer__'
+  return {
+    inBody: document.body.querySelectorAll(sel).length,
+    onRoot: document.documentElement.querySelectorAll(sel).length,
+    focusable: document.querySelectorAll(sel + ':is([tabindex="0"])').length,
+  }
+}
+log('ready', '靶场就绪')
+</script>
+</body>
+</html>

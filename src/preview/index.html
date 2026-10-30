@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <!-- Reason: opaque sandbox frames cannot reliably cancel their own navigation;
+       the parent policy blocks external destinations in both network modes. -->
+  <meta http-equiv="Content-Security-Policy" content="frame-src 'self'">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sideki 预览</title>
+  <style>
+    :root { --color-surface: #f6f6f2; --color-surface-raised: #fff; --color-text-primary: #111110; --color-text-secondary: #5b5b56; --color-border-subtle: #d8d8d0; --color-accent: #d0261a; --font-sans: system-ui, sans-serif; --font-mono: ui-monospace, monospace; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: var(--font-sans); background: var(--color-surface); color: var(--color-text-primary); height: 100dvh; display: flex; flex-direction: column; }
+    .toolbar { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--color-border-subtle); font-size: 12px; flex-shrink: 0; }
+    .brand { font-weight: 600; }
+    .toolbar .path { flex: 1; color: var(--color-text-secondary); font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    button { font: inherit; color: var(--color-text-primary); background: var(--color-surface-raised); border: 1px solid var(--color-border-subtle); padding: 6px 10px; border-radius: 4px; cursor: pointer; }
+    button:hover { border-color: var(--color-accent); }
+    button:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+    button:disabled { opacity: .5; cursor: default; }
+    #status { padding: 10px 16px; font-size: 12px; color: var(--color-text-secondary); border-bottom: 1px solid var(--color-border-subtle); white-space: pre-wrap; overflow-wrap: anywhere; }
+    #status[data-state="error"] { color: var(--color-error, #b42318); }
+    #content { flex: 1; min-height: 0; overflow: auto; }
+    #content iframe { width: 100%; min-height: 100%; border: none; display: block; }
+    #content img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; margin: auto; }
+    #content pre { padding: 16px; font: 13px/1.6 var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <header class="toolbar">
+    <span class="brand">Sideki</span>
+    <span class="path" id="filepath"></span>
+    <button id="retry" type="button" hidden>重试</button>
+    <button id="download" type="button" title="下载当前原文件">下载原文件</button>
+  </header>
+  <div id="status" role="status" aria-live="polite">正在加载预览…</div>
+  <main id="content"></main>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
