@@ -157,3 +157,9 @@ npm run lint         # ESLint 检查
 ## 许可
 
 私有项目，未经授权不得分发。
+
+## GitHub 自动发布
+
+PR 合并到 `main` 后，GitHub Actions 使用 Node 24 执行锁定依赖安装、测试和生产构建，自动创建 `v{version}` Release，上传 `Sideki-v{version}.zip` 与 `SHA256SUMS.txt`。ZIP 根目录包含 `manifest.json`，解压后可直接加载 Chrome 扩展。`dist/`、`dist-dev/`、本地 Node 运行时和发布 ZIP 不进入 Git。
+
+发布新版本前同步修改 `package.json`、`package-lock.json`（顶层与根包）和 `manifest.json` 的版本；例如 `1.5.1`。`npm run check:version` 会校验一致性。已有正式 Release 不覆盖；失败留下的草稿可以在 Actions 中重新运行完成上传。也可在 `Sideki Release` 工作流中手动选择 `main` 运行。PR 的 `Sideki CI` 会先执行相同的测试与构建检查。
