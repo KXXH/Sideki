@@ -1,165 +1,83 @@
 # Sideki
 
-产品与 Chrome 扩展展示名称均为 Sideki。沿用原扩展加载目录、存储键和备份格式，在 Chrome 扩展管理页直接重新加载即可，无需迁移数据。
+![Sideki — 浏览器里的通用智能 Agent](docs/assets/sideki-teaser.png)
 
-AI 驱动的 Chrome 侧面板助手。连接任意 OpenAI 兼容 API，在浏览器中实现页面问答、自动化操作、标签页管理和开发调试。
+Sideki 是一个运行在 Chrome 侧面板中的通用智能 Agent。
 
-## 安装
+你可以用自然语言，把绝大多数网页任务直接交给 Sideki，让它理解目标、规划步骤并执行。我们相信，通用 Agent 能够以很高的效率完成这些任务，让你专注于想要的结果。
 
-### 从源码构建
+## 快速开始
 
-```bash
-git clone <repo-url> && cd sidekick
-npm install
-npm run build
+1. 前往 [Releases](https://github.com/KXXH/Sideki/releases/latest)，下载 `Sideki-v版本号.zip`。
+2. 解压到一个固定目录。
+3. 打开 `chrome://extensions/`，启用右上角的**开发者模式**。
+4. 点击**加载已解压的扩展程序**，选择包含 `manifest.json` 的目录。
+5. 点击 Sideki 扩展图标，按引导连接模型。
+
+更新前可在设置中导出备份。将新版文件更新到原加载目录，再在扩展管理页点击**重新加载**。
+
+## 推荐配置
+
+我们推荐使用 **DeepSeek 官方 API 的 DeepSeek-V4.1-Flash**：
+
+| 配置 | 推荐值 |
+|---|---|
+| API 地址 | `https://api.deepseek.com` |
+| API Key | 你的 DeepSeek API Key |
+| 模型名称 | `deepseek-flash` |
+| Sideki 上下文窗口 | `400000`（400K） |
+| 思考强度 | `high`（高） |
+
+我们建议优先使用 Flash 级别的模型，在响应时间、成本与智能之间取得平衡。你也可以在设置中添加其他模型服务。
+
+Sideki 专为缓存友好设计，通过复用稳定的上下文提高缓存命中率。配合 DeepSeek 官方 API 的[缓存计费](https://api-docs.deepseek.com/quick_start/pricing/)，可以降低连续对话和多步任务的输入成本。
+
+## 网络搜索
+
+推荐接入 [Exa Search MCP](https://exa.ai/mcp)，为 Sideki 提供更好的网络搜索能力。
+
+在设置的 MCP 配置中添加服务地址：
+
+```text
+https://mcp.exa.ai/mcp
 ```
 
-构建产物在 `dist/` 目录，可独立运行。`npm run dev` 的开发产物在 `dist-dev/`，需保持开发服务器运行；开发预览不会覆盖 `dist/`。
+## 数据与隐私
 
-### 加载到 Chrome
+Sideki 没有自建后端服务。
 
-1. 打开 Chrome，地址栏输入 `chrome://extensions/`
-2. 打开右上角**开发者模式**
-3. 点击**加载已解压的扩展程序**
-4. 选择项目中的 `dist/` 目录
-5. 点击工具栏上的 Sideki 图标，侧面板即可打开
+对话、配置和附件默认保存在浏览器本地。模型调用与 MCP 请求由浏览器直接发送到你自行配置的服务，不经过 Sideki 服务器中转。
 
-> 每次 `npm run build` 后，回到 `chrome://extensions/` 点击扩展卡片上的刷新按钮即可更新。
+设置中提供数据导入和导出。我们建议在升级 Sideki 版本前，进行一次完整的数据备份。
 
-### 首次配置
+## 使用边界
 
-首次打开侧面板会进入「认识助手 → 选择主题 → 连接模型 → 体验画布」引导，也可稍后在设置（齿轮图标）的模型服务中配置：
+- `chrome://` 等浏览器内部页面受到 Chrome 的访问限制。
+- PDF 文本提取不包含扫描件 OCR。
+- 内置 Shell 使用会话中的虚拟文件系统。
+- HTML 画布默认离线运行。
+- 后台任务需要浏览器运行、设备处于唤醒状态；浏览器重启后任务会暂停。
 
-- **Endpoint**：OpenAI 兼容的 API 地址（如 `https://api.openai.com/v1`）
-- **API Key**：你的 API 密钥
-- **Model**：模型名称（如 `gpt-4o`、`claude-sonnet-4-20250514`）
+## 从源码开发
 
-支持 OpenAI Chat Completions 和 Responses API。在模型的「高级参数 → 接口格式」中切换；已有配置继续使用 Chat Completions，新建 OpenAI 模板默认使用 Responses。接口格式随每个模型独立保存，聊天、标题生成和上下文压缩共用该选择。
-
-Responses 使用官方通用 Open Responses 适配器，按协议处理明文推理、推理摘要和加密推理项，不按服务商名称或域名分支；本地保存完整会话历史。对于明确拒绝的可选摘要或加密内容请求参数，会移除该增强参数后重试，保留用户指定的推理强度。
-
-设置按模型服务、外观与显示、会话、文件与附件等用途分组。后台内核、拟真操作、异步脚本和 LLM 后端兼容模式默认开启，排障时可在 **开发者 → 兼容性与故障排查** 中展开调整；已有开关选择会保留。
-
-**文件与附件**分别控制图片副本和上传额度。大文件上传默认开启，单文件最多 32 MiB，会话文件容量 64 MiB；关闭图片副本不会降低上传额度。关闭大文件上传后，新上传文件最多 500 KiB，已有文件保留。
-
-## 主要功能
-
-### 页面问答
-
-打开任意网页，Sideki 自动识别页面内容。直接提问即可获得基于当前页面的回答——总结文章、翻译内容、提取数据、解释代码。
-
-### 浏览器自动化
-
-AI 可以直接操作当前页面：
-
-- **点击、填写、滚动** — 自动化表单填写、按钮操作
-- **元素定位** — 通过文本、CSS 选择器或编号索引定位元素
-- **截图** — 捕获页面截图供视觉分析
-- **导航** — 打开新页面或在页面间跳转
-
-### 定时唤醒与页面监听
-
-可以让 AI 稍后继续任务，或等待页面状态变化后继续，例如“5 分钟后检查构建结果”“导出按钮可用时提醒我”。两者共用聊天顶部的自动任务面板、唤醒记录和完成通知；面板中可以查看详情、暂停、恢复或取消。
-
-页面监听由 AI 提供同步 JS 安装函数，在绑定页面的 MAIN world 中订阅事件、设置轮询或使用 MutationObserver，通过 `emit(JSON值)` 传回事件，并可返回清理函数。等待期间不调用模型；连续事件合并，同一会话每分钟最多唤醒一次。默认监听 10 分钟、最多唤醒 5 次，单条消息最多 8 KiB；刷新或导航后需重新创建监听。Chat 模式安装代码沿用 JS 执行确认；Pro 安装监听时跳过该普通确认，但若遇到 CSP 并降级到 debugger，仍有独立的调试器授权。
-
-任务需要后台内核。关闭侧面板仍可运行；休眠时无法执行，浏览器重启后暂停任务。页面监听使用 `monitor` 工具创建、列出和删除，定时任务使用 `schedule` 工具管理。
-
-### 标签页与书签管理
-
-通过自然语言管理 Chrome 标签页和书签：
-
-- 列出、搜索、切换、关闭标签页
-- 按主题自动分组标签页
-- 整理书签结构、清理失效链接
-
-### 快捷指令
-
-输入框上方的快捷按钮，一键发送常用提示词。内置"总结页面"、"提取链接"等指令，可在设置中自定义添加。
-
-### Skills 技能系统
-
-输入 `/` 触发技能菜单。内置 SEO 审计、无障碍检查、性能分析等专项能力，支持用户自定义技能。
-
-### 记忆系统
-
-AI 可跨会话记忆用户偏好和站点信息：
-
-- **全局记忆** — 适用于所有对话（如语言偏好、称呼）
-- **站点记忆** — 按域名匹配，记住特定网站的操作习惯
-- **笔记** — 碎片化知识点的持久存储
-
-### 画布、文件预览与 PDF
-
-`visualize` 可将 `/viz/` 下的 HTML/HTM/SVG 片段作为交互画布直接嵌入聊天。默认离线；显式联网时使用另一档 sandbox CSP。该画布与新标签页预览是两条独立链路。
-
-画布与新标签页 HTML 预览共用能力规则：完整文档和片段均可，支持内联脚本、相同主题和本地交互，默认离线；显式联网后可加载 HTTPS 资源。两边都不解析相对/VFS 依赖，不继承登录态或开放 Chrome/Node API。新标签页独立运行，无需侧栏在场。
-
-URL Query 是其唯一联网配置：`network=1` 开启，`network=0`、缺失或其他值均离线。可直接分享 `[查看](/viz/report.html?network=1)`，无需先调用 `visualize`；画布的 `network` 参数保持独立，工具返回的 `previewPath` 与画布“新标签页打开”链接会携带同一模式。旧 `.meta.json` 文件不再读取，也不主动删除。
-
-图片可独立预览，下载保存原文件。详见 [HTML 成果能力](docs/html-artifacts.md)。
-
-上传 PDF 后，AI 可用 `pdf` 提取文本，或用 `pdf open` 打开阅读器，与用户共享逐字匹配的批注。扫描件没有 OCR。浏览器内置 PDF 查看器的正文不能直接按普通网页读取。
-
-### 数据备份与恢复
-
-沿用原目录并重新加载扩展即可更新，无需卸载。卸载、切换扩展 ID 或浏览器数据丢失时，需依赖备份恢复。提供两层保护：
-
-- **手动导入/导出** — 将全量数据（会话、设置、VFS、记忆、Skills、MCP 授权）导出为 `sidekick-backup-日期.json.gz` 文件，随时导入恢复。导入支持"仅恢复"和"合并"两种模式；合并保留现有配置、自定义操作与设备 OAuth，重名会话按更新时间选择，重名用户技能优先保留现有版本
-- **本地无感备份** — 通过 Node.js daemon 实时同步数据到本机 `~/.sidekick-backup/`。卸载重装后自动发现已有备份，一键恢复
-
-#### 无感备份配置
+需要 Node.js 24。
 
 ```bash
-cd tools/sidekick-daemon
-npm install
-node scripts/daemon.js install   # 安装为 launchd 服务（开机自启、崩溃自恢复）
+git clone https://github.com/KXXH/Sideki.git
+cd Sideki
+npm ci
+npm run dev
 ```
 
-安装后打开 Sideki → 设置 → 数据与备份 → 点击"连接备份服务"即可完成配对。配对后数据实时同步，无需手动操作。
+开发服务默认使用端口 `5174`。在 Chrome 中加载 `dist-dev/`，并保持开发服务运行。
 
-Daemon 默认监听 `127.0.0.1:9333`，提供 3 天滚动快照、删除会话归档保留 30 天和崩溃熔断。快照优先尝试 CoW 克隆，失败时普通复制，不保证零额外磁盘。`install` 使用 macOS launchd；其他环境可用 `npm start` 前台运行。
+| 命令 | 用途 |
+|---|---|
+| `npm run dev` | 开发模式，输出到 `dist-dev/` |
+| `npm run build` | 生产构建，输出到 `dist/` |
+| `npm test` | 自动化测试 |
+| `npm run lint` | ESLint 检查 |
 
-#### 更新插件的推荐方式
+## 即将推出
 
-1. **最安全**：在固定目录 `git clone`，更新时 `git pull && npm run build`，然后在 `chrome://extensions` 点"重新加载"——不会清理数据
-2. **需要卸载重装时**：先手动导出数据，卸载后重新加载，再导入恢复
-3. **最省心**：配置无感备份服务，卸载重装后自动发现并恢复
-
-### Pro 模式（开发者）
-
-面向开发者的专业调试模式：
-
-- **DevTools 集成** — 网络抓包、控制台监听、性能指标
-- **Claude Code Bridge** — 通过 WebSocket 与本地 Claude Code 双向连接
-- **虚拟 Shell** — just-bash 环境，支持管道组合和会话文件系统，不是宿主机终端
-
-Pro 提供更多调试能力和更高执行预算；常规工具是否确认仍由权限配置决定。进入 Pro 不等于所有工具天然免授权。
-
-## 快捷键
-
-| 快捷键 | 功能 |
-|--------|------|
-| `Cmd+Shift+L` | 将选中文本添加到 Sideki 上下文 |
-| `Option+T` | 新建会话（侧面板聚焦时） |
-
-## 开发
-
-```bash
-npm run dev          # 5174 开发服务器 (HMR)，扩展输出 dist-dev/
-npm run build        # 生产构建
-npm test             # 运行测试
-npm run lint         # ESLint 检查
-```
-
-技术文档入口：[docs/README.md](docs/README.md)；开发约束：[CLAUDE.md](CLAUDE.md)。默认运行宿主为 offscreen，面板关闭后可继续执行任务；面板回退模式需要保持面板打开。系统提示词明确产品身份为 Sideki，并单独说明用户配置的模型名称。
-
-## 许可
-
-私有项目，未经授权不得分发。
-
-## GitHub 自动发布
-
-PR 合并到 `main` 后，GitHub Actions 使用 Node 24 执行锁定依赖安装、测试和生产构建，自动创建 `v{version}` Release，上传 `Sideki-v{version}.zip` 与 `SHA256SUMS.txt`。ZIP 根目录包含 `manifest.json`，解压后可直接加载 Chrome 扩展。`dist/`、`dist-dev/`、本地 Node 运行时和发布 ZIP 不进入 Git。
-
-发布新版本前同步修改 `package.json`、`package-lock.json`（顶层与根包）和 `manifest.json` 的版本；例如 `1.5.1`。`npm run check:version` 会校验一致性。已有正式 Release 不覆盖；失败留下的草稿可以在 Actions 中重新运行完成上传。也可在 `Sideki Release` 工作流中手动选择 `main` 运行。PR 的 `Sideki CI` 会先执行相同的测试与构建检查。
+**自动审批 · Coming soon**
