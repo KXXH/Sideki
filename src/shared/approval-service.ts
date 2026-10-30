@@ -1,7 +1,7 @@
 import { ToolChoiceViolationError, ToolLoopAgent, hasToolCall, stepCountIs, tool } from 'ai'
 import type { UIMessage } from 'ai'
 import { z } from 'zod'
-import { createProvider } from './ai-provider'
+import { createProvider, sdkReasoningEffort } from './ai-provider'
 import { approvalInput, approvalTurnId, buildApprovalContext, type ApprovalCall } from './approval-context'
 import { ApprovalDebugLog, approvalDebugModel, boundedDebugValue, publicReviewMessages, type ApprovalDebugSnapshot, type ApprovalDebugUsage, type ApprovalTrace } from './approval-debug'
 import type { TokenCounts } from './token-usage'
@@ -64,22 +64,23 @@ function reviewUsage(calls: TokenCounts[]): ApprovalDebugUsage {
 }
 
 const runReviewer: ApprovalRunner = async (config, prompt, requestId, signal, sendMessage, trace, sessionId) => {
-  const reviewConfig = { ...config, reasoningEffort: 'low' as const }
+  const wantsReasoning = !!config.reasoningEffort && config.reasoningEffort !== 'none'
   let decisionOnly = false
   let currentStep = 0
   const reviewer = new ToolLoopAgent({
-    model: createProvider(reviewConfig, { sessionId: `approval:${requestId}`, enableThinking: true, supportsImages: false,
+    model: createProvider(config, { sessionId: `approval:${requestId}`, enableThinking: wantsReasoning, supportsImages: false,
       usage: { sessionId: sessionId ?? '', source: 'approval', onUsage: tokens => trace?.({ type: 'usage', stepNumber: currentStep, tokens, at: Date.now() }) } }),
     instructions: REVIEW_INSTRUCTIONS,
-    reasoning: 'low',
+    reasoning: sdkReasoningEffort(config.reasoningEffort),
     stopWhen: [hasToolCall('submitApproval'), stepCountIs(5)],
-    toolChoice: 'required',
+    // Reason: thinking providers can reject forced tool choices; validate the terminal decision locally.
+    toolChoice: 'auto',
     toolOrder: REVIEW_TOOL_ORDER,
-    // Reason: forcing the final decision must not remove schemas and invalidate the cached tool prefix.
+    // Reason: keep the tool prefix stable and enforce the final investigation limit locally.
     prepareStep: ({ stepNumber }) => {
       currentStep = stepNumber
       decisionOnly = stepNumber >= 4
-      return decisionOnly ? { toolChoice: { type: 'tool', toolName: 'submitApproval' } } : {}
+      return {}
     },
     maxOutputTokens: 1_200,
     onStepStart: event => {
@@ -101,7 +102,7 @@ const runReviewer: ApprovalRunner = async (config, prompt, requestId, signal, se
         ...REVIEW_TOOLS.bash,
         execute: async ({ command }) => {
           signal.throwIfAborted()
-          // Reason: enforce the final-step restriction locally even if a provider ignores tool_choice or mixes calls.
+          // Reason: enforce the final-step restriction locally even if a provider ignores the instructions or mixes calls.
           if (decisionOnly) throw new Error('审批最后一步只能通过 submitApproval 提交判定')
           const id = crypto.randomUUID()
           trace?.({ type: 'investigation-start', id, command, at: Date.now() })
@@ -121,13 +122,17 @@ const runReviewer: ApprovalRunner = async (config, prompt, requestId, signal, se
     },
   })
   const result = await reviewer.generate({ prompt, abortSignal: signal, timeout: REVIEW_TIMEOUT_MS })
+  const protocolError = (message: string): never => {
+    trace?.({ type: 'step-error', stepNumber: currentStep, error: message, at: Date.now() })
+    throw new Error(message)
+  }
   const lastCalls = result.steps.at(-1)?.toolCalls ?? []
   const submissions = result.steps.flatMap(step => step.toolCalls).filter(call => call.toolName === 'submitApproval')
   if (submissions.length !== 1 || lastCalls.length !== 1 || lastCalls[0].toolName !== 'submitApproval') {
-    throw new Error(`审批响应协议异常：模型未单独调用 submitApproval 提交唯一判定（结束原因：${result.finishReason}）`)
+    protocolError(`审批响应协议异常：模型未单独调用 submitApproval 提交唯一判定（结束原因：${result.finishReason}）`)
   }
   const parsed = REVIEW_DECISION_SCHEMA.safeParse(submissions[0].input)
-  if (!parsed.success || !parsed.data.reason.trim()) throw new Error('审批响应协议异常：submitApproval 判定参数无效')
+  if (!parsed.success || !parsed.data.reason.trim()) return protocolError('审批响应协议异常：submitApproval 判定参数无效')
   return { ...parsed.data, inputTokens: result.totalUsage.inputTokens, outputTokens: result.totalUsage.outputTokens }
 }
 

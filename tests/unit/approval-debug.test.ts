@@ -40,3 +40,7 @@ it('clear is session scoped and late active events cannot resurrect removed hist
   expect(log.snapshot('session').records).toEqual([])
   expect(log.snapshot('other-session').records).toHaveLength(1)
 })
+
+it.each(['none', 'low', 'high', 'max', ''] as const)('reports the configured reviewer effort %s', reasoningEffort => {
+  expect(approvalDebugModel({ model: 'review', reasoningEffort } as ApiConfig).reasoning).toBe(reasoningEffort)
+})

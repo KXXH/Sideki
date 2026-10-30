@@ -158,7 +158,7 @@ export default function ApprovalDebugPanel({ sessionId, refreshKey = 0 }: Props)
     </div>
     {error && <p role="alert" className="text-[11px] text-error">{error}</p>}
     {snapshot && <>
-      <p className="text-[10px] leading-relaxed text-text-muted">{snapshot.model.model || '未配置模型'} · {snapshot.model.protocol} · low 思考 · {snapshot.state.status === 'reviewing' ? '正在审批' : '空闲'}<br />独立查看每次审批的实际输入、模型轮次和工具返回。记录仅保存在内存中，宿主重启后清空。</p>
+      <p className="text-[10px] leading-relaxed text-text-muted">{snapshot.model.model || '未配置模型'} · {snapshot.model.protocol} · {snapshot.model.reasoning || '默认'} 思考 · {snapshot.state.status === 'reviewing' ? '正在审批' : '空闲'}<br />独立查看每次审批的实际输入、模型轮次和工具返回。记录仅保存在内存中，宿主重启后清空。</p>
       {snapshot.model.endpoint && <p className="break-all font-mono text-[10px] text-text-muted">{snapshot.model.endpoint}</p>}
       <label className="block text-[10px] text-text-muted">选择一次调用
         <select aria-label="审批 Agent 运行记录" value={selected?.id ?? ''} onChange={event => setSelectedId(event.target.value)} disabled={!records.length}

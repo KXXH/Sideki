@@ -1,4 +1,4 @@
-import type { ApiConfig, PermissionMode } from './types'
+import type { ApiConfig, PermissionMode, ReasoningEffort } from './types'
 import type { ApprovalState } from './approval-service'
 import type { TokenCounts } from './token-usage'
 
@@ -15,7 +15,7 @@ export interface ApprovalDebugModel {
   model: string
   endpoint: string
   protocol: string
-  reasoning: 'low'
+  reasoning: ReasoningEffort
   provider?: string
 }
 export interface ApprovalDebugStep {
@@ -93,7 +93,7 @@ export function approvalDebugModel(config: ApiConfig | null): ApprovalDebugModel
     url.username = ''; url.password = ''; url.search = ''; url.hash = ''
     endpoint = url.toString()
   } catch { /* Reason: malformed endpoint text could contain credentials. */ }
-  return { model: config?.model ?? '', endpoint, protocol: config?.apiProtocol ?? 'chat-completions', reasoning: 'low' }
+  return { model: config?.model ?? '', endpoint, protocol: config?.apiProtocol ?? 'chat-completions', reasoning: config?.reasoningEffort ?? '' }
 }
 
 export function boundedDebugValue(value: unknown, maxChars = 12_000): unknown {

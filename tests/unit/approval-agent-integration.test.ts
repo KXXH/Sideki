@@ -75,7 +75,9 @@ it('records investigation and ends immediately on the terminal approval tool wit
   expect(fetchMock).toHaveBeenCalledTimes(2)
   const body = JSON.parse(fetchMock.mock.calls[0][1]?.body as string)
   expect(body.response_format).toBeUndefined()
-  expect(body.tool_choice).toBe('required')
+  expect(body.tool_choice).toBe('auto')
+  expect(body.reasoning_effort).toBe('high')
+  expect(record.model.reasoning).toBe('high')
   expect(body.tools.map((entry: { function: { name: string } }) => entry.function.name)).toContain('submitApproval')
   expect(JSON.stringify(snapshot)).not.toMatch(/private-key|opaque-permit/)
 })
@@ -86,8 +88,8 @@ function approvalReply(message: unknown, finishReason = 'tool_calls') {
 function finalCall(input: unknown, id = 'decision') {
   return { id, type: 'function', function: { name: 'submitApproval', arguments: JSON.stringify(input) } }
 }
-function reviewerService(apiProtocol: ApiConfig['apiProtocol'] = 'chat-completions') {
-  const cfg = { endpoint: 'https://api.test/v1', apiKey: 'test', model: 'review-test', contextWindow: 100_000, apiProtocol } as ApiConfig
+function reviewerService(apiProtocol: ApiConfig['apiProtocol'] = 'chat-completions', overrides: Partial<ApiConfig> = {}) {
+  const cfg = { endpoint: 'https://api.test/v1', apiKey: 'test', model: 'review-test', contextWindow: 100_000, reasoningEffort: '', apiProtocol, ...overrides } as ApiConfig
   const send = vi.fn(async (message: Record<string, unknown>) => {
     if (message.type === 'approval:prepare') return { requestId: 'review-request', decision: 'review', environment: { tabId: 1 } }
     if (message.type === 'approval:bash') return { stdout: 'allow\n', stderr: '', exitCode: 0 }
@@ -186,7 +188,7 @@ it.each([
   expect(send.mock.calls.some(([message]) => message.type === 'approval:complete')).toBe(false)
 })
 
-it.each(['chat-completions', 'responses'] as const)('preserves %s tool schemas while forcing the final decision after four investigations', async protocol => {
+it.each(['chat-completions', 'responses'] as const)('preserves %s tool schemas and auto choice through the final decision after four investigations', async protocol => {
   const fetch = vi.spyOn(globalThis, 'fetch')
   for (let i = 0; i < 4; i++) fetch.mockResolvedValueOnce(reviewerReply(protocol, [{ id: `read-${i}`, type: 'function', function: { name: 'bash', arguments: '{"command":"page-content"}' } }]))
   fetch.mockResolvedValueOnce(reviewerReply(protocol, [finalCall({ decision: 'allow', reason: '目标已核实' })]))
@@ -194,7 +196,8 @@ it.each(['chat-completions', 'responses'] as const)('preserves %s tool schemas w
   expect(await service.review(call)).toEqual({ type: 'approved' })
   expect(fetch).toHaveBeenCalledTimes(5)
   const last = JSON.parse(fetch.mock.calls[4][1]?.body as string)
-  expect(last.tool_choice).toEqual(protocol === 'responses' ? { type: 'function', name: 'submitApproval' } : { type: 'function', function: { name: 'submitApproval' } })
+  expect(last.tool_choice).toBe('auto')
+  for (const [, init] of fetch.mock.calls) expect(JSON.parse(String(init?.body)).tool_choice).toBe('auto')
   const first = JSON.parse(String(fetch.mock.calls[0][1]?.body))
   for (const [, init] of fetch.mock.calls) expect(JSON.parse(String(init?.body)).tools).toEqual(first.tools)
   const steps = service.getDebugSnapshot().records[0].steps
@@ -202,7 +205,7 @@ it.each(['chat-completions', 'responses'] as const)('preserves %s tool schemas w
   expect(steps[4].system).toEqual(steps[0].system)
 })
 
-it('blocks further Bash investigation when a provider mixes it into the forced final decision', async () => {
+it('blocks further Bash investigation when a provider mixes it into the final decision', async () => {
   const fetch = vi.spyOn(globalThis, 'fetch')
   const investigation = (id: string) => ({ id, type: 'function', function: { name: 'bash', arguments: '{"command":"page-content"}' } })
   for (let i = 0; i < 4; i++) fetch.mockResolvedValueOnce(reviewerReply('chat-completions', [investigation(`read-${i}`)]))
@@ -212,4 +215,28 @@ it('blocks further Bash investigation when a provider mixes it into the forced f
   expect(send.mock.calls.filter(([message]) => message.type === 'approval:bash')).toHaveLength(4)
   expect(send.mock.calls.some(([message]) => message.type === 'approval:complete')).toBe(false)
   expect(service.getApproval(call.toolCallId)).toBeUndefined()
+})
+
+// Reason: exercise serialized SDK requests against a provider that rejects forced tool choices in thinking mode.
+it.each(['chat-completions', 'responses'] as const)('supports thinking-compatible %s approval requests without overriding configured effort', async protocol => {
+  for (const effort of ['none', 'low', 'high', 'max', ''] as const) {
+    const bodies: { tool_choice?: unknown; reasoning_effort?: string; reasoning?: { effort?: string } }[] = []
+    const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(async (_url, init) => {
+      const body = JSON.parse(String(init?.body))
+      bodies.push(body)
+      if (body.tool_choice !== 'auto') return new Response(JSON.stringify({ error: { message: 'Thinking mode does not support this tool_choice', type: 'invalid_request_error' } }), { status: 400, headers: { 'content-type': 'application/json' } })
+      return bodies.length < 5
+        ? reviewerReply(protocol, [{ id: `inspect-${bodies.length}`, type: 'function', function: { name: 'bash', arguments: '{"command":"page-content"}' } }])
+        : reviewerReply(protocol, [finalCall({ decision: 'allow', reason: '已核实用户授权' })])
+    })
+    const { service, call } = reviewerService(protocol, { endpoint: 'https://api.deepseek.com/v1', model: 'deepseek-review', reasoningEffort: effort })
+    expect(await service.review(call)).toEqual({ type: 'approved' })
+    expect(bodies).toHaveLength(5)
+    for (const body of bodies) {
+      expect(body.tool_choice).toBe('auto')
+      expect(protocol === 'responses' ? body.reasoning?.effort : body.reasoning_effort).toBe(effort || undefined)
+    }
+    expect(service.getDebugSnapshot().records[0].model.reasoning).toBe(effort)
+    fetch.mockRestore()
+  }
 })
