@@ -30,6 +30,10 @@ jobs:
         id: version
         run: echo "tag=v$(node scripts/check-version.mjs)" >> "$GITHUB_OUTPUT"
       - run: npm test
+        env:
+          CHROME_BIN: ''
+      - name: Run real Chrome navigation checks
+        run: CHROME_BIN="$(command -v google-chrome)" npx --no-install vitest run tests/integration/html-preview-navigation.test.ts --maxWorkers=1
       - run: npm run build
       - name: Package extension and checksum
         env:
