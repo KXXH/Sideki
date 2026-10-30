@@ -32,3 +32,9 @@ vibe_images/
 
 # Generated from AI_POINTER_MARKUP by tests/fixtures/gen-pointer-preview.cjs
 tests/fixtures/pointer-preview.html
+
+# Generated extension releases and local development tools
+/dist/
+/release/
+/.runtime/
+/run.sh
