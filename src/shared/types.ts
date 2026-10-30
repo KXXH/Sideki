@@ -37,6 +37,7 @@ export type FontSize = 'compact' | 'default' | 'relaxed'
 export type ColorMode = 'system' | 'light' | 'dark'
 
 export type SecurityLevel = 'strict' | 'permissive'
+export type PermissionMode = 'ask' | 'auto' | 'allow'
 
 export interface McpServerConfig {
   id: string
@@ -45,6 +46,8 @@ export interface McpServerConfig {
   auth: { type: 'none' } | { type: 'oauth' }
   enabled: boolean
 }
+
+export type ToolCallDisplay = 'description' | 'raw'
 
 export interface ApiConfig {
   apiProtocol?: ApiProtocol
@@ -56,6 +59,7 @@ export interface ApiConfig {
   reasoningEffort: ReasoningEffort
   supportsImages?: boolean
   securityLevel: SecurityLevel
+  defaultPermissionMode?: PermissionMode
   // Reason: zero uses the built-in 100-step budget rather than disabling the limit.
   maxToolRounds: number
   yoloMode: boolean
@@ -78,6 +82,8 @@ export interface ApiConfig {
   // Reason: true-default quality-of-life switches. Explicit false is the opt-out
   // path for older configs that omit the field.
   collapseSteps?: boolean
+  // Reason: presentation only; both choices retain descriptions in tool inputs.
+  toolCallDisplay?: ToolCallDisplay
   // Reason: announce a finished turn through a system notification when the
   // session is not on screen (panel closed, another session shown, browser in
   // the background). True-default: explicit false is the opt-out.
@@ -137,6 +143,7 @@ export interface ChatSession {
   updatedAt: number
   pageUrl?: string
   mode?: 'chat' | 'pro'
+  permissionMode?: PermissionMode
   messages: unknown[]
   // Reason: metadata-only transfers (offscreen env proxy) strip messages —
   // this carries the real count so list UIs can still distinguish empty

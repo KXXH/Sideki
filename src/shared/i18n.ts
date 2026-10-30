@@ -104,6 +104,8 @@ export const t = {
   noNotes: '暂无笔记',
   collapseSteps: '折叠中间步骤',
   collapseStepsDesc: '将连续的思考和工具调用折叠为"查看 N 个步骤"，只显示最终回复',
+  toolCallDisplay: '显示工具操作描述',
+  toolCallDisplayDesc: '开启后显示 AI 对本次操作的说明；关闭后显示工具名和参数摘要',
   autoCompress: '自动上下文压缩',
   autoCompressDesc: '自动归档较早的工具输出；上下文达到 80% 时调用模型生成摘要，减少后续上下文占用',
   kernelHost: '后台内核（Offscreen）',

@@ -166,6 +166,17 @@ describe('Storage', () => {
     expect(chrome.storage.local.set).toHaveBeenCalledWith({ sidekick_config: { endpoint: 'x', yoloMode: false } })
   })
 
+  it('persists per-chat permission independently of the new-chat default', async () => {
+    await saveSession(makeSession('permissions', { permissionMode: 'ask' }))
+    await saveConfig({ defaultPermissionMode: 'allow', securityLevel: 'strict', yoloMode: false } as any)
+    expect((await loadConfig())?.defaultPermissionMode).toBe('allow')
+    expect((await loadSession('permissions'))?.permissionMode).toBe('ask')
+    await updateSessionMeta('permissions', { permissionMode: 'auto' })
+    expect((await loadSession('permissions'))?.permissionMode).toBe('auto')
+    expect((await loadSessionIndex()).find(session => session.id === 'permissions')?.permissionMode).toBe('auto')
+    expect((await loadConfig())?.defaultPermissionMode).toBe('allow')
+  })
+
   describe('local test doubles', () => {
     it('filters get keys, supplies defaults, and supports all-key reads', async () => {
       await memory.local.set({ a: { nested: [1] }, b: false, untouched: 'value' })
@@ -726,7 +737,7 @@ describe('Storage', () => {
       await deleteSession('a')
       expect(memory.data).toEqual({ [SESSION_INDEX_KEY]: [metadata(b)], [bodyKey('b')]: b })
       expect(memory.local.set.mock.calls).toEqual([[{ [SESSION_INDEX_KEY]: [metadata(b)], [DELETES_KEY]: ['a'] }]])
-      expect(memory.local.remove.mock.calls).toEqual([[[bodyKey('a'), DELETES_KEY]]])
+      expect(memory.local.remove.mock.calls).toEqual([[[bodyKey('a'), 'sidekick_canvas:a', DELETES_KEY]]])
     })
 
     it('deleteSessions removes a batch with one index write and removes every requested body', async () => {
@@ -743,7 +754,7 @@ describe('Storage', () => {
       expect(memory.events).toEqual([
         { operation: 'get', keys: [SESSION_INDEX_KEY, PENDING_KEY, DELETES_KEY, SESSION_MIGRATION_KEY] },
         { operation: 'set', values: { [SESSION_INDEX_KEY]: [metadata(b)], [DELETES_KEY]: ['a', 'c', 'orphan', 'absent'] } },
-        { operation: 'remove', keys: [bodyKey('a'), bodyKey('c'), bodyKey('orphan'), bodyKey('absent'), DELETES_KEY] },
+        { operation: 'remove', keys: [bodyKey('a'), bodyKey('c'), bodyKey('orphan'), bodyKey('absent'), 'sidekick_canvas:a', 'sidekick_canvas:c', 'sidekick_canvas:orphan', 'sidekick_canvas:absent', DELETES_KEY] },
       ])
       expect(memory.local.set).toHaveBeenCalledTimes(1)
       expect(memory.local.remove).toHaveBeenCalledTimes(1)

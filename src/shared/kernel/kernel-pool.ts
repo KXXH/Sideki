@@ -1,5 +1,6 @@
 import type { ApiConfig, ChatSession, PageContent } from '../types'
 import { SessionRuntime } from './kernel-runtime'
+import { resolveDefaultPermissionMode } from '../permission-mode'
 import type { KernelEnv, RuntimeHooks } from './kernel-runtime'
 
 export interface PageCtx {
@@ -224,7 +225,7 @@ export class KernelPool {
       const k = e.rt.kernel
       const pinned = e.retain > 0
         || e.rt.kstate.status !== 'ready'
-        || k.compacting || k.preparing || k.queue.length > 0
+        || k.compacting || k.preparing || k.dispatching || k.queue.length > 0
       if (pinned) continue
       if (now - e.lastReleaseAt < this.#opts.graceMs) continue
       evictable.push({ id, e })
@@ -265,6 +266,7 @@ export class KernelPool {
 
   newSession(mode: 'chat' | 'pro', pageUrl?: string): ChatSession {
     const s = createSession(pageUrl, mode)
+    s.permissionMode = resolveDefaultPermissionMode(this.config)
     this.sessions = [s, ...this.sessions]
     this.env.saveSession(s).catch(() => {})
     this.#notify()

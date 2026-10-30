@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback, useSyncExternalStore } from 'react'
+import { canvasSendHooks, canvasRequest } from '../../shared/canvas-client'
 import { DirectChatTransport, type ChatTransport, type UIMessage } from 'ai'
 import { loadConfig, loadSessionIndex, loadSession, saveSession, updateSessionMeta, deleteSession } from '../../shared/storage'
 import { mirrorAttachments, prepareFileAttachments } from '../../shared/attachment-mirror'
@@ -10,11 +11,15 @@ import { prepareOutgoingMessages, visibleText, buildUserParts, savedFileParts, t
 import type { McpToolMeta } from '../../shared/mcp-client'
 import { agentFingerprint } from '../../shared/agent-fingerprint'
 import { generateTitle } from '../../shared/ai-provider'
-import type { ApiConfig, PageContent, ChatSession, ElementAttachment } from '../../shared/types'
+import type { ApiConfig, PageContent, ChatSession, ElementAttachment, PermissionMode } from '../../shared/types'
+import { resolveDefaultPermissionMode, resolveSessionPermissionMode } from '../../shared/permission-mode'
+import { ApprovalService, type ApprovalState } from '../../shared/approval-service'
+import type { ApprovalDebugSnapshot } from '../../shared/approval-debug'
 import { SidekickKernel, KernelChat, COMPACT_MSG_ID, ARCHIVE_KEEP_TURNS, type SendItem } from '../../shared/kernel/chat-kernel'
 import { useKernelMirror } from './useKernelMirror'
 import { parseTurnNotificationId, extractTurnSnippet } from '../../shared/turn-notify'
 import { planTabSessionSwitch } from '../utils/tab-session-plan'
+import { publishToolActivities } from '../../shared/kernel/tool-activity'
 
 // Reason: legacy import surface — ChatView/DevView/QueueStrip import these
 // from the hook; the source of truth moved into the kernel module.
@@ -52,7 +57,7 @@ function throttleNotify(fn: () => void, ms: number): () => void {
   }
 }
 
-function createSession(pageUrl?: string, mode?: 'chat' | 'pro'): ChatSession {
+function createSession(pageUrl?: string, mode?: 'chat' | 'pro', config?: ApiConfig | null): ChatSession {
   return {
     id: crypto.randomUUID(),
     title: 'New Chat',
@@ -60,6 +65,7 @@ function createSession(pageUrl?: string, mode?: 'chat' | 'pro'): ChatSession {
     updatedAt: Date.now(),
     pageUrl,
     mode: mode ?? 'chat',
+    permissionMode: resolveDefaultPermissionMode(config),
     messages: [],
     messageCount: 0,
   }
@@ -127,6 +133,9 @@ export interface SessionSnapshot {
   outgoing: UIMessage[]
   orogenLines: string[]
   getCraton(): Promise<CratonSnapshot | null>
+  getApprovalDebug?(): Promise<ApprovalDebugSnapshot>
+  clearApprovalDebug?(): Promise<void>
+  testApproval?(command: string): Promise<void>
 }
 export const sessionSnapshotRef: { current: (() => SessionSnapshot) | null } = { current: null }
 
@@ -177,9 +186,11 @@ export function useSidekickChat(
   // scenarios. lastTurnTokens is now updated in the finish event handler using
   // lastStepInputTokens (= actual context size of the final step).
   const handleTokenUsage = useCallback(() => {}, [])
+  const approvalServiceRef = useRef<ApprovalService | null>(null)
 
   const transport = useMemo((): ChatTransport<UIMessage> => ({
     sendMessages: async (opts) => {
+      approvalServiceRef.current?.bindSignal(opts.abortSignal)
       if (!realTransportRef.current) throw new Error('Config not loaded yet')
       // Reason: shared pipeline (interrupted-call cleanup + v2 expansion) —
       // same function the session inspector uses, so previews never drift.
@@ -197,13 +208,15 @@ export function useSidekickChat(
   // ref access.
   const onFinishRef = useRef<(opts: { message: UIMessage }) => void>(() => {})
   const [kernel] = useState(() => new PanelKernel({
+    ...canvasSendHooks(msg => chrome.runtime.sendMessage(msg)),
     getConfig: () => configRef.current,
     getSessionId: () => sessionIdRef.current,
     // Reason: seed the turn's tab stack up front — the turn keeps one stable
     // tab reference for its whole life, even for turns that call no tools.
-    onTurnStart: () => acquireTurnTab({
+    onTurnStart: item => acquireTurnTab({
       getSessionId: () => sessionIdRef.current,
-      getTabId: () => currentTabId.current,
+      getTabId: () => item.opts?.canvasSource?.tabId ?? currentTabId.current,
+      isPinned: () => item.opts?.canvasSource?.tabId != null,
     }),
   }))
   const [chat] = useState(() => new KernelChat<UIMessage>({
@@ -212,6 +225,17 @@ export function useSidekickChat(
     onFinish: (opts) => onFinishRef.current(opts),
     onError: (err) => { console.error('[useSidekickChat] error:', err) },
   }))
+  const [approvalService] = useState(() => new ApprovalService({
+    getConfig: () => configRef.current,
+    getSessionId: () => sessionIdRef.current,
+    getMessages: () => kernel.kstate.messages,
+    getMode: () => resolveSessionPermissionMode(sessionsRef.current.find(session => session.id === sessionIdRef.current), configRef.current),
+    getTabId: () => currentTabId.current,
+    sendMessage: message => chrome.runtime.sendMessage(message),
+    onState: () => kernel.kstate.bump(),
+  }))
+  approvalServiceRef.current = approvalService
+  useEffect(() => () => approvalService.cancelAll('会话已切换或宿主已关闭'), [approvalService, activeId, mirrorActive])
 
   // Reason: panel-mode counterpart of the offscreen runtime's lazy craton —
   // entry actions (new session, switch) build nothing; the first send calls
@@ -366,11 +390,14 @@ export function useSidekickChat(
             proxyTools[m.qualifiedName] = dynamicTool({
               description: m.description,
               inputSchema: jsonSchema(m.inputSchema),
-              execute: async (args: unknown, { abortSignal }: { abortSignal?: AbortSignal }) => {
+              execute: async (args: unknown, { abortSignal, toolCallId }: { abortSignal?: AbortSignal; toolCallId: string }) => {
                 const responsePromise = chrome.runtime.sendMessage({
                   type: 'mcp:call-tool',
                   qualifiedName: m.qualifiedName,
                   args,
+                  sessionId: sessionIdRef.current,
+                  toolCallId,
+                  approval: approvalService.getApproval(toolCallId),
                   // Reason: consent routing and site attribution should name
                   // the page the turn is operating on, not whichever tab the
                   // user switched to. Peek (never seed) — a pure-MCP turn must
@@ -408,7 +435,8 @@ export function useSidekickChat(
       const tools = Object.keys(proxyTools).length > 0 ? proxyTools : undefined
       console.log('[agent rebuild] creating agent, model:', cfg.model)
       const agentStarted = Date.now()
-      const a = await createAgent(cfg, pageContextRef, pageImagesRef, debugStatusRef, sessionIdRef, hostnameRef, tools, handleTokenUsage, undefined, proMode ? 'pro' : 'chat')
+      const a = await createAgent(cfg, pageContextRef, pageImagesRef, debugStatusRef, sessionIdRef, hostnameRef, tools, handleTokenUsage,
+        { getSessionId: () => sessionIdRef.current, getTabId: () => currentTabId.current }, proMode ? 'pro' : 'chat', undefined, approvalService)
       signal.throwIfAborted()
       console.log(`[agent init] createAgent ${Date.now() - agentStarted}ms; total ${Date.now() - started}ms`)
       installTransport(a)
@@ -428,10 +456,12 @@ export function useSidekickChat(
   const compacting = useSyncExternalStore(subscribe, () => kernel.compacting)
   const preparing = useSyncExternalStore(subscribe, () => kernel.preparing)
   const dispatching = useSyncExternalStore(subscribe, () => kernel.dispatching)
+  const approvalState = useSyncExternalStore(subscribe, () => approvalService.state)
   const chatSendMessage = chat.sendMessage
   const stop = useCallback(async () => {
+    approvalService.cancelAll('任务已停止')
     if (!kernel.cancelPreparation()) await chat.stop()
-  }, [kernel, chat])
+  }, [kernel, chat, approvalService])
   const clearError = chat.clearError
 
   // Reason: drop-in replacement for useChat's setMessages — existing call
@@ -469,6 +499,24 @@ export function useSidekickChat(
     sessionsRef.current = next
     setSessions(next)
   }, [])
+  const setPermissionMode = useCallback(async (mode: PermissionMode) => {
+    if (mode !== 'ask' && mode !== 'auto' && mode !== 'allow') return
+    const session = sessionsRef.current.find(item => item.id === sessionIdRef.current)
+    if (!session) return
+    const previous = session.permissionMode
+    approvalService.cancelAll('权限模式已变化', false)
+    const updated = { ...session, permissionMode: mode, messages: kernel.kstate.messages, messageCount: kernel.kstate.messages.length, updatedAt: Date.now() }
+    updateSessions(sessionsRef.current.map(item => item.id === session.id ? updated : item))
+    try {
+      await saveSession(updated)
+    } catch (error) {
+      if (sessionsRef.current.find(item => item.id === session.id)?.permissionMode === mode) {
+        approvalService.cancelAll('权限模式保存失败', false)
+        updateSessions(sessionsRef.current.map(item => item.id === session.id ? { ...item, permissionMode: previous } : item))
+      }
+      throw error
+    }
+  }, [approvalService, kernel, updateSessions])
   const patchSessionMeta = useCallback((id: string, patch: Partial<Pick<ChatSession, 'title' | 'updatedAt'>>) => {
     if (!sessionsRef.current.some(s => s.id === id) || deletingSessionIds.current.has(id)) return
     // Reason: storage bumps updatedAt on every metadata write — the local list
@@ -564,9 +612,18 @@ export function useSidekickChat(
         }
         return cratonRef.current
       },
+      getApprovalDebug: async () => mirrorActive ? mirrorRequest<ApprovalDebugSnapshot>('approval-debug') : approvalService.getDebugSnapshot(),
+      clearApprovalDebug: async () => {
+        if (mirrorActive) await mirrorRequest('approval-debug-clear')
+        else approvalService.clearDebugHistory()
+      },
+      testApproval: async command => {
+        if (mirrorActive) await mirrorRequest('approval-debug-test', { command })
+        else await approvalService.testApproval(command)
+      },
     })
     return () => { sessionSnapshotRef.current = null }
-  }, [proMode, mirrorActive, mirrorRequest])
+  }, [proMode, mirrorActive, mirrorRequest, approvalService])
 
   // --- Compression / archiving / queue: kernel-owned, hook keeps triggers ---
   const compactNow = useCallback(() => kernel.compactNow(), [kernel])
@@ -647,7 +704,7 @@ export function useSidekickChat(
   const handleNewSession = useCallback(() => {
     ++sessionLoadRef.current
     flushSave()
-    const s = createSession(pageInfoRef.current?.url, proMode ? 'pro' : 'chat')
+    const s = createSession(pageInfoRef.current?.url, proMode ? 'pro' : 'chat', configRef.current)
     clearQueue()
     updateSessions([s, ...sessionsRef.current.filter(existing => (existing.mode ?? 'chat') === s.mode)])
     activateSession(s)
@@ -667,6 +724,12 @@ export function useSidekickChat(
   // ready boundary the kernel host uses (turn-automation). In mirror mode the
   // offscreen runtime owns the turn and releases there.
   const prevStatusRef = useRef(status)
+  useEffect(() => {
+    if (mirrorActive) return
+    return publishToolActivities(kernel.kstate, () => turnSessionRef.current || activeIdRef.current,
+      message => chrome.runtime.sendMessage(message))
+  }, [kernel, mirrorActive])
+
   useEffect(() => {
     const prev = prevStatusRef.current
     prevStatusRef.current = status
@@ -820,8 +883,9 @@ export function useSidekickChat(
     const request = ++sessionLoadRef.current
     loadedSessionIds.current.clear()
     clearQueue()
-    void loadSessionIndex().then(loaded => {
+    void Promise.all([loadSessionIndex(), loadConfig()]).then(([loaded, initialConfig]) => {
       if (request !== sessionLoadRef.current) return
+      if (initialConfig) configRef.current = initialConfig
       const currentMode = proMode ? 'pro' : 'chat'
       // Reason: sessions without a mode field are legacy — treat as 'chat'.
       const sorted = loaded.filter(s => (s.mode ?? 'chat') === currentMode)
@@ -996,7 +1060,8 @@ export function useSidekickChat(
   const sendNow = useCallback(async (
     text: string,
     attachments?: ElementAttachment[],
-    opts?: { skill?: SkillPartData; fromBridge?: boolean; page?: { title: string; url: string } },
+    opts?: SendItem['opts'],
+    sendId?: string,
   ) => {
     const dispatchToken = kernel.dispatchToken
     // Reason: a build can take seconds — a session switch during it must drop
@@ -1006,6 +1071,7 @@ export function useSidekickChat(
     // Reason: protocol v2 — visible text, skill/element data parts and UI flags
     // are kept structured; expandForModel composes model input at send time.
     const metadata: SidekickMetadata = { v: 2 }
+    if (opts?.canvasSource) metadata.canvasSource = { canvasId: opts.canvasSource.canvasId, title: opts.canvasSource.title }
     if (opts?.fromBridge) metadata.source = 'claude-code'
     // Reason: page provenance captured at enqueue time (handleSend), not flush
     // time — "where the user asked" survives queue delays and tab switches.
@@ -1019,7 +1085,7 @@ export function useSidekickChat(
     // SDK only appends the message when sendMessage runs at the end of it. The
     // commit further down reuses this id, so the placeholder is replaced in
     // place instead of being followed by a second copy.
-    const pendingId = crypto.randomUUID()
+    const pendingId = sendId || crypto.randomUUID()
     const pendingParts = buildUserParts({ text, attachments, skill: opts?.skill, savedFiles: savedFileParts(attachments) })
     if (pendingParts.length === 0) {
       kernel.releaseHandoff()
@@ -1060,7 +1126,7 @@ export function useSidekickChat(
       // Reason: commit a fresh object — the metadata pushed above must never be
       // mutated in place, since the kernel state holds that very reference.
       const finalMetadata: SidekickMetadata = attachmentNotes ? { ...metadata, attachmentNotes } : metadata
-      const parts = buildUserParts({ text, attachments, skill: opts?.skill, savedFiles })
+      const parts = buildUserParts({ text, attachments, skill: opts?.skill, savedFiles, canvasContext: opts?.canvasContext })
       if (parts.length === 0) {
         // Reason: nothing survived to send after all — retract the placeholder
         // rather than leave a bubble with no request behind it.
@@ -1070,6 +1136,17 @@ export function useSidekickChat(
       }
       // Reason: messageId commits into the placeholder pushed above — same id,
       // same position, so the bubble never duplicates or flickers.
+      if (opts?.canvasContext?.length) {
+        const index = kernel.kstate.messages.findIndex(m => m.id === pendingId)
+        kernel.kstate.replaceMessage(index, { id: pendingId, role: 'user', parts, metadata: finalMetadata })
+        const session = sessionsRef.current.find(s => s.id === sessionAtSend)
+        if (!session) throw new Error('来源会话不存在')
+        await saveSession({ ...session, messages: kernel.kstate.messages, updatedAt: Date.now() }).catch(error => {
+          kernel.kstate.error = error instanceof Error ? error : new Error(String(error))
+          throw error
+        })
+        if (activeIdRef.current !== sessionAtSend) return
+      }
       const handedOff = chatSendMessage({ parts, metadata: finalMetadata, messageId: pendingId } as Parameters<typeof chatSendMessage>[0])
       // Reason: the SDK flips status to 'submitted' synchronously — from now on
       // the status carries the turn, so this dispatch releases its flag.
@@ -1085,8 +1162,29 @@ export function useSidekickChat(
   // Reason: wire the kernel's send boundary to the latest sendNow closure —
   // queued flushes and direct sends share exactly this path.
   useEffect(() => {
-    kernel.sendFn = (item) => sendNow(item.text, item.attachments, item.opts)
+    kernel.sendFn = (item) => sendNow(item.text, item.attachments, item.opts, item.id)
   }, [kernel, sendNow])
+
+  useEffect(() => {
+    if (kernelHost !== 'panel') return
+    const listener = (msg: { type?: string; sessionId?: string; canvasId?: string; title?: string; prompt?: string }, _sender: chrome.runtime.MessageSender, respond: (value: unknown) => void) => {
+      if (msg.type !== 'canvas:enqueue-panel' || msg.sessionId !== sessionIdRef.current) return undefined
+      void (async () => {
+        if (!msg.canvasId || !msg.prompt) throw new Error('画布请求无效')
+        const target = msg.sessionId!
+        const valid = await canvasRequest<boolean>(m => chrome.runtime.sendMessage(m), 'validate-target', { sessionId: target, tabId: currentTabId.current })
+        if (!valid || sessionIdRef.current !== target) throw new Error('请先恢复来源会话的执行页面绑定')
+        const run = kernel.handleSend(msg.prompt, undefined, { canvasSource: { canvasId: msg.canvasId, title: msg.title ?? '画布', tabId: currentTabId.current! }, page: pageInfoRef.current ?? undefined })
+        void run.catch(e => { if (e?.name !== 'AbortError') kernel.kstate.error = e instanceof Error ? e : new Error(String(e)) })
+        // Reason: acceptSend resolves at queue admission, not at the end of model execution.
+        const messageId = await kernel.whenAccepted()
+        respond({ accepted: true, messageId })
+      })().catch(error => respond({ accepted: false, error: String(error) }))
+      return true
+    }
+    chrome.runtime.onMessage.addListener(listener)
+    return () => chrome.runtime.onMessage.removeListener(listener)
+  }, [kernel, kernelHost])
 
   const sendContextRef = useRef({ sessionId: activeIdRef.current, kernelHost, proMode })
   if (sendContextRef.current.sessionId !== activeIdRef.current || sendContextRef.current.kernelHost !== kernelHost || sendContextRef.current.proMode !== proMode) {
@@ -1109,7 +1207,9 @@ export function useSidekickChat(
       ? await prepareFileAttachments(attachments, target.sessionId, configRef.current?.largeFileUploads !== false, msg => chrome.runtime.sendMessage(msg), assertCurrent)
       : attachments
     assertCurrent()
-    void kernel.handleSend(text, prepared, { ...opts, page })
+    void kernel.handleSend(text, prepared, { ...opts, page }).catch(error => {
+      if (error?.name !== 'AbortError') kernel.kstate.error = error instanceof Error ? error : new Error(String(error))
+    })
   }, [kernel])
 
   const removeQueued = useCallback((id: string) => kernel.removeQueued(id), [kernel])
@@ -1262,6 +1362,7 @@ export function useSidekickChat(
   const mirrorDeleteSession = useCallback(async (id: string) => { cmd('delete-session', { id, mode: proMode ? 'pro' : 'chat' }) }, [cmd, proMode])
   const mirrorRenameSession = useCallback((id: string, title: string) => cmd('rename-session', { id, title }), [cmd])
   const mirrorCompactNow = useCallback(async () => { cmd('compact-now') }, [cmd])
+  const mirrorSetPermissionMode = useCallback(async (mode: PermissionMode) => { await mirrorRequest('set-permission-mode', { mode }) }, [mirrorRequest])
 
   // Reason: a completion notice is the only route back to a session nobody is
   // watching, so landing on that exact conversation is the point of the click.
@@ -1327,7 +1428,7 @@ export function useSidekickChat(
   // only changes when a session actually changed, letting the memoized
   // SessionBar skip re-filtering/sorting hundreds of entries per frame.
   const sessionsSig = mirrorExtras.sessions
-    .map(s => `${s.id}\x1f${s.updatedAt}\x1f${s.messageCount ?? 0}\x1f${s.title}`).join('\n')
+    .map(s => `${s.id}\x1f${s.updatedAt}\x1f${s.messageCount ?? 0}\x1f${s.title}\x1f${s.permissionMode ?? ''}`).join('\n')
   const mirrorSessions = useMemo(
     () => mirrorExtras.sessions.map(s => ({ ...s, messages: [] })) as unknown as ChatSession[],
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1375,6 +1476,9 @@ export function useSidekickChat(
       compactNow: mirrorCompactNow,
       modelName: ex.modelName,
       config: ex.config ?? config,
+      permissionMode: resolveSessionPermissionMode(mirrorSessions.find(session => session.id === ex.activeId), ex.config ?? config),
+      setPermissionMode: mirrorSetPermissionMode,
+      approvalState: (ex as typeof ex & { approvalState?: ApprovalState }).approvalState,
       relayedIds: emptyRelayedRef,
       debugStatusRef,
     }
@@ -1415,6 +1519,9 @@ export function useSidekickChat(
     compactNow,
     modelName: config?.model ?? '',
     config,
+    permissionMode: resolveSessionPermissionMode(sessions.find(session => session.id === activeId), config),
+    setPermissionMode,
+    approvalState,
     relayedIds: relayedIdsRef,
     debugStatusRef,
   }

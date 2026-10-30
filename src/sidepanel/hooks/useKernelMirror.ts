@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { applySnapshot, applyPatch } from '../../shared/kernel/sync-protocol'
 import type { PanelMirror, SyncSnapshot, SyncPatch } from '../../shared/kernel/sync-protocol'
-import type { ApiConfig } from '../../shared/types'
+import type { ApiConfig, PermissionMode } from '../../shared/types'
 
 // Reason: session metadata mirrored from the kernel — message bodies travel
 // through the patch stream, the session bar only needs these fields.
@@ -12,6 +12,7 @@ export interface MirrorSessionMeta {
   updatedAt: number
   pageUrl?: string
   mode: 'chat' | 'pro'
+  permissionMode?: PermissionMode
   messageCount: number
 }
 

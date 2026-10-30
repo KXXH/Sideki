@@ -1,4 +1,7 @@
 import type { ApiConfig, ChatSession } from './types'
+import { resolveDefaultPermissionMode } from './permission-mode'
+import { commitCanvasMessageState } from './canvas-storage'
+import { canvasStorageKey } from './canvas-state'
 
 const CONFIG_KEY = 'sidekick_config'
 const SESSIONS_KEY = 'sidekick_sessions'
@@ -9,9 +12,10 @@ export async function loadConfig(): Promise<ApiConfig | null> {
   if (!config) return null
   if (config.yoloMode === undefined && typeof config.proMode === 'boolean') {
     const { proMode: legacyProMode, ...rest } = config
-    return { ...rest, yoloMode: legacyProMode } as ApiConfig
+    const migrated = { ...rest, yoloMode: legacyProMode } as ApiConfig
+    return { ...migrated, defaultPermissionMode: resolveDefaultPermissionMode(migrated) }
   }
-  return { ...config, yoloMode: config.yoloMode ?? false } as ApiConfig
+  return { ...config, yoloMode: config.yoloMode ?? false, defaultPermissionMode: resolveDefaultPermissionMode(config) } as ApiConfig
 }
 
 export async function saveConfig(config: ApiConfig): Promise<void> {
@@ -118,7 +122,7 @@ export function withSessionStorage<T>(operation: (index: SessionIndexEntry[]) =>
     }
     const pendingDeletes = stored[PENDING_DELETES_KEY] as string[] | undefined
     if (pendingDeletes) {
-      await chrome.storage.local.remove([...pendingDeletes.map(sessionStorageKey), PENDING_DELETES_KEY])
+      await chrome.storage.local.remove([...pendingDeletes.map(sessionStorageKey), ...pendingDeletes.map(canvasStorageKey), PENDING_DELETES_KEY])
     }
     return operation(index)
   })
@@ -160,10 +164,13 @@ async function writeSession(session: ChatSession, index: SessionIndexEntry[]): P
 }
 
 export function saveSession(session: ChatSession): Promise<void> {
-  return withSessionStorage(index => writeSession(session, index))
+  return withSessionStorage(async index => {
+    await writeSession(session, index)
+    await commitCanvasMessageState(session.id, session.messages)
+  })
 }
 
-export function updateSessionMeta(id: string, patch: Partial<Pick<ChatSession, 'title' | 'updatedAt'>>): Promise<void> {
+export function updateSessionMeta(id: string, patch: Partial<Pick<ChatSession, 'title' | 'updatedAt' | 'permissionMode'>>): Promise<void> {
   return withSessionStorage(async index => {
     if (!index.some(entry => entry.id === id)) return
     const key = sessionStorageKey(id)
@@ -188,7 +195,7 @@ export async function deleteSessions(ids: string[]): Promise<void> {
       [SESSION_INDEX_KEY]: index.filter(entry => !drop.has(entry.id)),
       [PENDING_DELETES_KEY]: ids,
     })
-    await chrome.storage.local.remove([...ids.map(sessionStorageKey), PENDING_DELETES_KEY])
+    await chrome.storage.local.remove([...ids.map(sessionStorageKey), ...ids.map(canvasStorageKey), PENDING_DELETES_KEY])
   })
 }
 

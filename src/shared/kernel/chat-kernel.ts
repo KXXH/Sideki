@@ -1,7 +1,8 @@
 import type { TimerWake } from '../scheduled-task'
+import type { CanvasSnapshot } from '../canvas-state'
 import { AbstractChat } from 'ai'
 import type { ChatInit, ChatState, ChatStatus, UIMessage } from 'ai'
-import type { SkillPartData } from '../message-protocol'
+import { canvasContextOf, type SkillPartData } from '../message-protocol'
 import type { ApiConfig, ElementAttachment } from '../types'
 import { findCompactionCutoff, findArchiveCutoff } from '../format'
 import { compactContext } from '../ai-provider'
@@ -111,7 +112,7 @@ export interface SendItem {
   attachments?: ElementAttachment[]
   // Reason: `page` is the enqueue-time page snapshot (protocol v2 provenance) —
   // it must ride with the queued item, not be re-read at flush time.
-  opts?: { timer?: TimerWake; skill?: SkillPartData; fromBridge?: boolean; page?: { title: string; url: string } }
+  opts?: { timer?: TimerWake; skill?: SkillPartData; fromBridge?: boolean; page?: { title: string; url: string }; canvasContext?: CanvasSnapshot[]; canvasSource?: { canvasId: string; title: string; tabId?: number } }
 }
 
 export const COMMAND_DEDUP_CAP = 200
@@ -127,6 +128,8 @@ const ARCHIVE_MIN_CHARS = 500
 const ARCHIVE_HEAD_CHARS = 200
 
 export interface KernelInit {
+  prepareSend?: (sessionId: string, item: SendItem, liveClaims: string[]) => Promise<SendItem>
+  discardSend?: (sessionId: string, item: SendItem) => void
   getConfig?: () => ApiConfig | null
   getSessionId?: () => string
   // Reason: runs once per turn, immediately before dispatch — the host uses it
@@ -141,6 +144,12 @@ export interface KernelInit {
 // the hook-era effect/ref choreography (flushingRef/preparingRef) with plain
 // sequential logic driven by state notifications.
 export class SidekickKernel {
+  #admissions = Promise.resolve()
+  #pendingAdmissions = 0
+  #inFlightItems = new Set<string>()
+  #lastAdmission: Promise<{ id: string }> = Promise.resolve({ id: '' })
+  #admissionEpoch = 0
+  #stoppedAdmissionEpoch = -1
   readonly kstate = new KernelChatState<UIMessage>()
 
   #queue: SendItem[] = []
@@ -175,7 +184,7 @@ export class SidekickKernel {
   // ready-boundary handoff the scheduler may have already popped the next item,
   // so the in-flight flushing guard is part of the continuation signal.
   get hasQueuedContinuation(): boolean {
-    return this.#queue.length > 0 || this.#flushing
+    return this.#queue.length > 0 || this.#flushing || this.#pendingAdmissions > 0
   }
 
   get compacting(): boolean {
@@ -187,7 +196,12 @@ export class SidekickKernel {
   }
 
   cancelPreparation(): boolean {
-    if (!this.#preparation) return false
+    const pending = this.#pendingAdmissions > 0
+    if (pending) {
+      this.#stoppedAdmissionEpoch = this.#admissionEpoch
+      this.#admissionEpoch++
+    }
+    if (!this.#preparation) return pending && this.kstate.status === 'ready'
     this.#preparation.abort(new DOMException('初始化已停止', 'AbortError'))
     return true
   }
@@ -227,7 +241,7 @@ export class SidekickKernel {
   // Reason: a send is in flight and the turn has not reached the SDK yet —
   // the busy window the status alone cannot describe (it is still 'ready').
   get dispatching(): boolean {
-    return this.#dispatching
+    return this.#dispatching || this.#pendingAdmissions > 0
   }
 
   get dispatchToken(): number {
@@ -272,20 +286,52 @@ export class SidekickKernel {
     attachments?: SendItem['attachments'],
     opts?: SendItem['opts'],
   ): Promise<void> {
+    let item: SendItem = { id: crypto.randomUUID(), text, attachments, opts }
+    const sessionId = this.sessionId
+    if (this.deps.prepareSend && !opts?.timer && !opts?.fromBridge) {
+      const epoch = this.#admissionEpoch
+      this.#pendingAdmissions++
+      this.kstate.bump()
+      const prepare = this.#admissions.then(async () => {
+        try {
+          item = await this.deps.prepareSend!(sessionId, item, [...this.#inFlightItems, ...this.#queue.map(q => q.id)])
+          if (epoch !== this.#admissionEpoch || sessionId !== this.sessionId) {
+            this.deps.discardSend?.(sessionId, item)
+            if (epoch <= this.#stoppedAdmissionEpoch) throw new DOMException('发送已取消', 'AbortError')
+            throw new Error('会话已切换，发送已取消')
+          }
+          // Reason: reserve and accept in order, without waiting for a model turn to finish.
+          return this.#accept(item)
+        } finally {
+          this.#pendingAdmissions--
+          this.kstate.bump()
+        }
+      })
+      this.#admissions = prepare.then(() => {}, () => {})
+      this.#lastAdmission = prepare
+      const accepted = await prepare
+      return accepted.run
+    }
+    return this.#accept(item).run
+  }
+
+  async whenAccepted(): Promise<string> { return (await this.#lastAdmission).id }
+
+  #accept(item: SendItem): { run: Promise<void>; id: string } {
     // Reason: dispatching covers the handoff window where status is still
     // 'ready' — a second send there must queue, not race the first one into
     // the SDK (the loser's messageId is truncated away and lost).
     if (this.#scheduleHold || this.kstate.status !== 'ready' || this.#compacting || this.#preparing || this.#dispatching) {
-      this.#queue = [...this.#queue, { id: crypto.randomUUID(), text, attachments, opts }]
+      this.#queue = [...this.#queue, item]
       this.kstate.bump()
-      return
+      return { run: Promise.resolve(), id: item.id }
     }
     this.#flushing = true
-    return this.#dispatch({ id: crypto.randomUUID(), text, attachments, opts }).catch(err => {
+    return { id: item.id, run: this.#dispatch(item).catch(err => {
       console.error('[kernel] send failed:', err)
-      if (opts?.timer) this.kstate.error = err instanceof Error ? err : new Error(String(err))
+      if (item.opts?.timer) this.kstate.error = err instanceof Error ? err : new Error(String(err))
       this.#flushing = false
-    })
+    }) }
   }
 
   // Reason: a send can end without the SDK taking the turn (missing config,
@@ -301,6 +347,8 @@ export class SidekickKernel {
   // flush) — a turn must not start before its tab stack is seeded, otherwise it
   // has no stable tab reference and the UI cannot show the held state yet.
   async #dispatch(item: SendItem): Promise<void> {
+    const sessionId = this.sessionId
+    this.#inFlightItems.add(item.id)
     // Reason: the busy truth starts at acceptance, not inside performSend —
     // tab seeding runs before the transport exists and must not admit a second
     // direct send into the same handoff.
@@ -317,11 +365,15 @@ export class SidekickKernel {
       }
       return await this.performSend(item)
     } finally {
+      this.#inFlightItems.delete(item.id)
+      this.deps.discardSend?.(sessionId, item)
       this.endDispatch(token)
     }
   }
 
   removeQueued(id: string): void {
+    const item = this.#queue.find(q => q.id === id)
+    if (item) this.deps.discardSend?.(this.sessionId, item)
     this.#queue = this.#queue.filter(q => q.id !== id)
     this.kstate.bump()
   }
@@ -329,6 +381,7 @@ export class SidekickKernel {
   takeQueued(id: string): SendItem | null {
     const item = this.#queue.find(q => q.id === id) ?? null
     if (item) {
+      this.deps.discardSend?.(this.sessionId, item)
       this.#queue = this.#queue.filter(q => q.id !== id)
       this.kstate.bump()
     }
@@ -336,7 +389,9 @@ export class SidekickKernel {
   }
 
   clearQueue(): void {
+    this.#admissionEpoch++
     if (this.#queue.length === 0) return
+    for (const item of this.#queue) this.deps.discardSend?.(this.sessionId, item)
     this.#queue = []
     this.kstate.bump()
   }
@@ -391,6 +446,7 @@ export class SidekickKernel {
       const plain = toCompress.map(m => ({
         role: m.role,
         content: m.parts.filter(p => p.type === 'text').map(p => p.text).join('') || '[non-text content]',
+        ...(m.role === 'user' && canvasContextOf(m).length ? { canvasContext: canvasContextOf(m) } : {}),
       }))
 
       console.log(`[compact] compressing ${toCompress.length} messages, keeping ${toKeep.length}`)

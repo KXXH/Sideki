@@ -1,4 +1,5 @@
 import { execScript, ScriptDeadlineError } from './tool-handlers'
+import type { ToolActivity } from '../shared/tool-description'
 
 let indicatorEnabled = true
 
@@ -20,7 +21,7 @@ interface IndicatorAck { ok: true; seq: number; stale?: true }
 // Reason: exported for tests only — the guard's ordering semantics are the whole
 // point of this module and cannot be observed from the outside. Must stay
 // self-contained: it is serialized into the page, so no closure references.
-export function installLockIndicator(visible: boolean, seq: number, leaseMs: number, leaveMs: number): IndicatorAck {
+export function installLockIndicator(visible: boolean, seq: number, leaseMs: number, leaveMs: number, activities?: ToolActivity[]): IndicatorAck {
   // Reason: execScript races a deadline but never cancels the underlying
   // executeScript, so an injection can land arbitrarily late — after the hide
   // that was meant to supersede it. Nothing else in the chain enforces
@@ -33,22 +34,39 @@ export function installLockIndicator(visible: boolean, seq: number, leaseMs: num
   w.__sidekickLockSeq = seq
 
   const id = '__sidekick_lock_indicator__'
-  const existing = document.getElementById(id) as (HTMLDivElement & { __sidekickRemoveTimer?: number }) | null
+  type ActivityState = {
+    calls: Map<string, ToolActivity & { since: number }>
+    label: string
+    changedAt: number
+    timer?: number
+    textTimer?: number
+  }
+  type IndicatorHost = HTMLDivElement & { __sidekickRemoveTimer?: number; __sidekickActivity?: ActivityState }
+  const existing = document.getElementById(id) as IndicatorHost | null
+  const cancelActivity = (node: IndicatorHost) => {
+    const state = node.__sidekickActivity
+    if (!state) return
+    window.clearTimeout(state.timer)
+    window.clearTimeout(state.textTimer)
+    delete node.__sidekickActivity
+  }
 
   if (!visible) {
     if (!existing) return { ok: true, seq }
+    cancelActivity(existing)
     existing.dataset.visible = 'leaving'
     if (existing.__sidekickRemoveTimer) window.clearTimeout(existing.__sidekickRemoveTimer)
     existing.__sidekickRemoveTimer = window.setTimeout(() => existing.remove(), leaveMs)
     return { ok: true, seq }
   }
 
-  const host = existing ?? document.createElement('div') as HTMLDivElement & { __sidekickRemoveTimer?: number }
+  const host = existing ?? document.createElement('div') as IndicatorHost
   const created = !existing
   if (host.__sidekickRemoveTimer) window.clearTimeout(host.__sidekickRemoveTimer)
   // Reason: the lease — the same removal path an explicit hide uses, just
   // further out. Re-armed by every show, so a renewed island never reaches it.
   host.__sidekickRemoveTimer = window.setTimeout(() => {
+    cancelActivity(host)
     host.dataset.visible = 'leaving'
     window.setTimeout(() => host.remove(), leaveMs)
   }, leaseMs)
@@ -189,6 +207,12 @@ export function installLockIndicator(visible: boolean, seq: number, leaseMs: num
           opacity: 0;
           transform: translateY(3px);
           transition: max-width 260ms ease 40ms, opacity 180ms ease 90ms, transform 220ms ease 90ms;
+          text-overflow: ellipsis;
+        }
+        .label[data-changing="true"] { animation: sidekick-label-in 320ms ease both; }
+        @keyframes sidekick-label-in {
+          from { opacity: 0; transform: translateY(4px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         .dot {
           position: absolute;
@@ -234,10 +258,10 @@ export function installLockIndicator(visible: boolean, seq: number, leaseMs: num
           transition: opacity 560ms ease, transform 700ms cubic-bezier(.18,.9,.22,1);
         }
         .hit:hover {
-          width: 198px;
+          width: min(var(--island-width, 198px), calc(100vw - 20px));
         }
         .hit:hover .island {
-          width: 198px;
+          width: min(var(--island-width, 198px), calc(100vw - 20px));
           padding: 0 14px;
         }
         .hit:hover .sparkles {
@@ -246,7 +270,7 @@ export function installLockIndicator(visible: boolean, seq: number, leaseMs: num
           transform: translateY(0) scale(1);
         }
         .hit:hover .label {
-          max-width: 142px;
+          max-width: 100%;
           opacity: 1;
           transform: translateY(0) scale(1);
         }
@@ -282,6 +306,53 @@ export function installLockIndicator(visible: boolean, seq: number, leaseMs: num
       </div>
     `
   }
+  const label = host.shadowRoot?.querySelector<HTMLElement>('.label')
+  if (label) {
+    const generic = 'Agent 正在此页工作'
+    if (!host.__sidekickActivity) {
+      label.textContent = generic
+      label.title = generic
+      label.dataset.changing = 'false'
+      host.style.setProperty('--island-width', '198px')
+    }
+    const state: ActivityState = host.__sidekickActivity ??= { calls: new Map(), label: generic, changedAt: Date.now() - 2_000 }
+    if (activities !== undefined) {
+      const now = Date.now()
+      state.calls = new Map(activities.map(call => [call.id, { ...call, since: state.calls.get(call.id)?.since ?? now }]))
+    }
+    window.clearTimeout(state.timer)
+    const update = () => {
+      // Reason: pending callbacks must not resurrect a hidden or replaced island.
+      if (host.__sidekickActivity !== state || host.dataset.visible === 'leaving') return
+      const now = Date.now()
+      // Reason: parallel calls share one slot; only the latest live candidate is
+      // considered. Old candidates are never queued for playback.
+      const candidate = [...state.calls.values()].at(-1)
+      const eligibleAt = candidate ? candidate.since + 600 : now
+      const next = candidate && now >= eligibleAt
+        ? `${candidate.phase === 'preparing' ? '准备：' : ''}${candidate.description}` : generic
+      const canChangeAt = state.changedAt + 2_000
+      if (next !== state.label && now >= canChangeAt) {
+        state.label = next
+        state.changedAt = now
+        label.textContent = next
+        label.title = next
+        label.dataset.changing = 'false'
+        // Reason: restarting only the text animation leaves the island and its
+        // hover expansion stable across activity updates.
+        void label.offsetWidth
+        label.dataset.changing = 'true'
+        window.clearTimeout(state.textTimer)
+        state.textTimer = window.setTimeout(() => { label.dataset.changing = 'false' }, 320)
+        host.style.setProperty('--island-width', `${Math.min(360, Math.max(198, next.length * 12 + 64))}px`)
+      }
+      const nextAt = candidate && now < eligibleAt
+        ? Math.max(eligibleAt, next !== state.label ? canChangeAt : now)
+        : next !== state.label ? canChangeAt : null
+      if (nextAt !== null) state.timer = window.setTimeout(update, Math.max(1, nextAt - now))
+    }
+    update()
+  }
   const reveal = () => { host.dataset.visible = 'true' }
   if (created || host.dataset.visible !== 'true') {
     host.dataset.visible = 'false'
@@ -299,7 +370,7 @@ export function installLockIndicator(visible: boolean, seq: number, leaseMs: num
 // and we climb above it, so a service-worker restart converges on its own.
 let lastIssuedSeq = 0
 
-async function injectIndicator(tabId: number, visible: boolean): Promise<void> {
+async function injectIndicator(tabId: number, visible: boolean, activities?: ToolActivity[]): Promise<void> {
   const seq = ++lastIssuedSeq
   try {
     // Reason: world and frame are pinned because the guard's marker lives on the
@@ -310,7 +381,7 @@ async function injectIndicator(tabId: number, visible: boolean): Promise<void> {
       world: 'ISOLATED',
       injectImmediately: true,
       func: installLockIndicator,
-      args: [visible, seq, LEASE_MS, LEAVE_MS],
+      args: [visible, seq, LEASE_MS, LEAVE_MS, ...(activities === undefined ? [] : [activities])],
     }, 5_000)
     const ack = res?.[0]?.result
     if (!ack) return
@@ -329,9 +400,9 @@ async function injectIndicator(tabId: number, visible: boolean): Promise<void> {
   }
 }
 
-export async function showPageLockIndicator(tabId: number): Promise<void> {
+export async function showPageLockIndicator(tabId: number, activities?: ToolActivity[]): Promise<void> {
   if (!indicatorEnabled) return
-  await injectIndicator(tabId, true)
+  await injectIndicator(tabId, true, activities)
 }
 
 export async function hidePageLockIndicator(tabId: number): Promise<void> {

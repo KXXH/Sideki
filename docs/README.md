@@ -28,6 +28,7 @@ Offscreen 承担模型请求与工具循环，面板关闭后仍可继续；SW �
 |---|---|
 | [architecture.md](architecture.md) | 运行环境、模式、安全与通信、持久化分工 |
 | [agent.md](agent.md) | Sideki 身份、模型配置、提示词缓存、工具归档、压缩与 Provider |
+| [permissions.md](permissions.md) | 对话权限、自动审批 agent、只读调查环境与调用级授权 |
 | [html-artifacts.md](html-artifacts.md) | 画布与新标签页统一能力契约、独立宿主、联网模式继承 |
 | [frontend.md](frontend.md) | Kernel 镜像、会话管理、消息协议、Streamdown、附件、画布与主题 |
 | [browser.md](browser.md) | 元素解析、输入引擎、JS 执行、授权与截图 |

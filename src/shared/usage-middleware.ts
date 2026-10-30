@@ -1,7 +1,13 @@
 import type { LanguageModelMiddleware } from 'ai'
 import type { LanguageModelV4Usage } from '@ai-sdk/provider'
 import type { ApiConfig, ApiProtocol } from './types'
-import type { TokenCounts, UsageEvent } from './token-usage'
+import type { TokenCounts, UsageEvent, UsageSource } from './token-usage'
+
+export interface UsageMiddlewareOptions {
+  sessionId?: string
+  source?: UsageSource
+  onUsage?(tokens: TokenCounts): void
+}
 
 function count(value: unknown): number | null {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null
@@ -34,17 +40,21 @@ export function normalizeTokenUsage(usage: LanguageModelV4Usage, protocol?: ApiP
   }
 }
 
-export function usageMiddleware(config: ApiConfig, session = ''): LanguageModelMiddleware {
+export function usageMiddleware(config: ApiConfig, session = '', options: UsageMiddlewareOptions = {}): LanguageModelMiddleware {
   const profile = config.profiles?.find(p => p.id === config.activeProfileId)
   const identity = {
-    session: session.slice(0, 200),
+    session: (options.sessionId ?? session).slice(0, 200),
+    source: options.source ?? 'main',
     provider: (config.activeProfileId || 'default').slice(0, 200),
     name: (profile?.name || 'Default').slice(0, 200),
     model: config.model.slice(0, 200),
   }
   async function report(usage: LanguageModelV4Usage) {
+    const tokens = normalizeTokenUsage(usage, config.apiProtocol)
+    // Reason: collect usage before SDK protocol validation; an invalid decision still consumed model tokens.
+    try { options.onUsage?.(tokens) } catch { console.warn('[usage] observer failed') }
     try {
-      const event: UsageEvent = { ...identity, id: crypto.randomUUID(), at: Date.now(), tokens: normalizeTokenUsage(usage, config.apiProtocol) }
+      const event: UsageEvent = { ...identity, id: crypto.randomUUID(), at: Date.now(), tokens }
       const result = await chrome.runtime.sendMessage({ type: 'usage:record', event })
       if (result?.success === false) console.warn('[usage] save failed')
     } catch {

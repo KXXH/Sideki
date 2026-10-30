@@ -1,6 +1,7 @@
 import { defineCommand } from 'just-bash'
 import type { Command } from 'just-bash'
-import { requireConsent } from './tool-handlers'
+import { requireConsent as requestConsent } from './tool-handlers'
+import type { ExecutionApproval } from '../shared/approval-types'
 import { gateExplicitTab, noteExplicitOperatingTab } from './tab-locks'
 
 function parseFlag(args: string[], flag: string): string | null {
@@ -67,7 +68,8 @@ async function getGroupNames(): Promise<Map<number, { title: string; color: stri
   return map
 }
 
-async function handleTabs(args: string[], tabId: number, sessionId: string): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+async function handleTabs(args: string[], tabId: number, sessionId: string, authorization?: ExecutionApproval): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+  const requireConsent = (...args: Parameters<typeof requestConsent>) => authorization ? requestConsent(args[0], args[1], args[2], args[3], authorization) : requestConsent(...args)
   const switchTo = parseFlag(args, 'switch')
   const newUrl = parseFlag(args, 'new')
   const closeIdx = parseFlag(args, 'close')
@@ -177,7 +179,8 @@ async function handleTabs(args: string[], tabId: number, sessionId: string): Pro
   return { stdout: lines.join('\n') + '\n', stderr: '', exitCode: 0 }
 }
 
-async function handleBookmarks(args: string[], tabId: number): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+async function handleBookmarks(args: string[], tabId: number, authorization?: ExecutionApproval): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+  const requireConsent = (...args: Parameters<typeof requestConsent>) => authorization ? requestConsent(args[0], args[1], args[2], args[3], authorization) : requestConsent(...args)
   const search = parseFlag(args, 'search')
   const addUrl = parseFlag(args, 'add')
   const rmId = parseFlag(args, 'rm')
@@ -303,14 +306,14 @@ async function handleTopSites(): Promise<{ stdout: string; stderr: string; exitC
   return { stdout: lines.join('\n') + '\n', stderr: '', exitCode: 0 }
 }
 
-export function createChromeCommand(tabId: number, sessionId = ''): Command {
+export function createChromeCommand(tabId: number, sessionId = '', getAuthorization?: () => ExecutionApproval | undefined): Command {
   return defineCommand('chrome', async (args) => {
     const sub = args[0]
     const subArgs = args.slice(1)
 
     switch (sub) {
-      case 'tabs': return handleTabs(subArgs, tabId, sessionId)
-      case 'bookmarks': return handleBookmarks(subArgs, tabId)
+      case 'tabs': return handleTabs(subArgs, tabId, sessionId, getAuthorization?.())
+      case 'bookmarks': return handleBookmarks(subArgs, tabId, getAuthorization?.())
       case 'history': return handleHistory(subArgs)
       case 'downloads': return handleDownloads(subArgs)
       case 'top-sites': return handleTopSites()

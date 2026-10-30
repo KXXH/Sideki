@@ -41,7 +41,7 @@ ChatView.handleSend
 | 用途 | 页面理解、日常操作 | CDP 调试和开发协作 |
 | 页面正文 | 首次准备上下文时提取并冻结 | 不预注入正文，按需读取 |
 | `debug` 命令与技能 | 无 debug 命令；技能索引按模式筛选 | 注册 debug 命令，提供调试技能 |
-| 操作确认 | 由 `securityLevel`、`yoloMode` 和站点授权控制 | 同一授权判断；session mode 本身不自动放行 |
+| 操作确认 | 对话级请求批准 / 自动审批 / 全部允许；保留站点授权 | 同一授权判断；session mode 本身不自动放行 |
 | stdout / stderr 截断 | 各 8192 字符 / 200 行 | 各 65536 字符 / 2000 行 |
 | Bash 执行预算 | 5 秒 | 30 秒 |
 | 默认 VFS 容量 | 单文件 32 MiB、会话 64 MiB | 同左 |
@@ -50,7 +50,7 @@ ChatView.handleSend
 
 截断代码以 JS 字符串 `.length` / `.slice` 计量，尽管返回提示写 bytes，不能将其当作 UTF-8 字节精确上限。文件容量计量和保留旧大文件的规则见 [Shell](shell.md)。
 
-`requireConsent` 和 debugger 授权仅在 permissive / yolo 自动通过；交互/导航可按真实 Web origin 使用站点授权，任意 JS 执行和标签页管理不走该豁免。开启 Pro 时是否同时选择放开权限是 UI 配置行为，不能等价为「Pro 所有安全限制解除」。
+主 agent 在 SDK 工具执行前应用对话权限；自动审批通过后由后台签发绑定一次完整调用的授权，Bash 内部普通确认不重复审批。请求批准沿用普通操作确认和站点授权；独立 debugger/CSP 能力授权仍保留。旧 `securityLevel` / `yoloMode` 用于迁移与非主 agent 入口兼容，不作为新对话权限 UI。详见 [权限与审批](permissions.md)。
 
 Pro 固定深色石墨中性色，强调色跟随所选主题的 dark 色组，并非固定琥珀色。
 

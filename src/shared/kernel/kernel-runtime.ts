@@ -1,4 +1,5 @@
 import type { TimerWake } from '../scheduled-task'
+import { canvasSendHooks } from '../canvas-client'
 import { parsePageContent } from '../parser'
 import { DirectChatTransport, dynamicTool, jsonSchema } from 'ai'
 import type { ChatTransport, UIMessage } from 'ai'
@@ -11,9 +12,12 @@ import { mirrorAttachments } from '../attachment-mirror'
 import { peekOperatingTabId, acquireTurnTab } from '../tools/bridge'
 import type { McpToolMeta } from '../mcp-client'
 import { agentFingerprint } from '../agent-fingerprint'
-import type { ApiConfig, PageContent, ChatSession } from '../types'
+import type { ApiConfig, PageContent, ChatSession, PermissionMode } from '../types'
+import { resolveSessionPermissionMode } from '../permission-mode'
+import { ApprovalService } from '../approval-service'
 import { SidekickKernel, KernelChat } from './chat-kernel'
 import type { SendItem } from './chat-kernel'
+import { publishToolActivities } from './tool-activity'
 
 // Reason: environment seam — the runtime itself never touches chrome.storage
 // or chrome.tabs directly. The panel host implements this with direct chrome
@@ -75,6 +79,7 @@ export interface SessionRuntimeInit {
 // debounced persistence. The session-multiplexing pool instantiates one per
 // bound session; nothing in here is shared between sessions.
 export class SessionRuntime {
+  readonly approvals: ApprovalService
   readonly kernel: RuntimeKernel
   readonly chat: KernelChat<UIMessage>
   readonly env: KernelEnv
@@ -106,9 +111,11 @@ export class SessionRuntime {
   private relayedIds = new Set<string>()
   private saveTimer: ReturnType<typeof setTimeout> | null = null
   private timerTabId: number | null = null
+  private canvasTabId: number | null = null
   private timerWake: TimerWake | null = null
   private disposed = false
   private lastSavedMessages: UIMessage[] | null = null
+  private unsubscribeActivities: (() => void) | null = null
 
   constructor(init: SessionRuntimeInit) {
     this.env = init.env
@@ -120,6 +127,7 @@ export class SessionRuntime {
     this.onSessionUpdated = init.onSessionUpdated
 
     this.kernel = new RuntimeKernel({
+      ...canvasSendHooks(msg => this.env.sendMessage(msg)),
       getConfig: () => this.getConfig(),
       getSessionId: () => this.sessionId,
       // Reason: seed the turn's tab stack up front — the turn keeps one stable
@@ -127,6 +135,7 @@ export class SessionRuntime {
       onTurnStart: async (item) => {
         const previousWasTimer = this.timerTabId != null
         this.timerTabId = null
+        this.canvasTabId = item.opts?.canvasSource?.tabId ?? null
         this.timerWake = null
         this.currentTurnPage = null
         const timer = item.opts?.timer
@@ -138,7 +147,7 @@ export class SessionRuntime {
           this.currentTurnPage = { title: result.title, url: result.url }
         } else {
           if (previousWasTimer) await this.env.sendMessage({ type: 'tab-lock:release', sessionId: this.sessionId })
-          await acquireTurnTab({ getSessionId: () => this.sessionId, getTabId: () => this.hooks.getCurrentTabId() })
+          await acquireTurnTab({ getSessionId: () => this.sessionId, getTabId: () => this.canvasTabId ?? this.hooks.getCurrentTabId(), isPinned: () => this.canvasTabId != null })
         }
       },
     })
@@ -150,6 +159,7 @@ export class SessionRuntime {
     // inspector calls, so previews never drift.
     const transport: ChatTransport<UIMessage> = {
       sendMessages: async (opts) => {
+        this.approvals.bindSignal(opts.abortSignal)
         if (!this.realTransport) throw new Error('Config not loaded yet')
         const expanded = prepareOutgoingMessages(opts.messages)
         return this.realTransport.sendMessages({ ...opts, messages: expanded })
@@ -161,6 +171,15 @@ export class SessionRuntime {
       transport,
       onFinish: (opts) => { this.lastTurnAborted = opts.isAbort; this.onTurnFinish(opts.message).catch(() => {}) },
       onError: (err) => { console.error('[session-runtime] error:', err) },
+    })
+    this.approvals = new ApprovalService({
+      getConfig: () => this.getConfig(),
+      getSessionId: () => this.sessionId,
+      getMessages: () => this.kstate.messages,
+      getMode: () => resolveSessionPermissionMode(this.session, this.getConfig()),
+      getTabId: () => this.timerTabId ?? this.hooks.getCurrentTabId(),
+      sendMessage: message => this.env.sendMessage(message),
+      onState: () => this.bump(),
     })
 
     const msgs = sessionMessages(init.session)
@@ -178,11 +197,14 @@ export class SessionRuntime {
     }
     this.kstate.messages = msgs
     this.lastSavedMessages = this.kstate.messages
+    this.unsubscribeActivities = publishToolActivities(this.kstate, () => this.sessionId, message => this.env.sendMessage(message))
   }
 
   get kstate() {
     return this.kernel.kstate
   }
+
+  get canvasTargetTabId(): number | null { return this.hooks.getCurrentTabId() }
 
   get relayedIdSet(): Set<string> {
     return this.relayedIds
@@ -193,12 +215,16 @@ export class SessionRuntime {
   }
 
   async stop(): Promise<void> {
+    this.approvals.cancelAll('任务已停止')
     if (!this.kernel.cancelPreparation()) await this.chat.stop()
   }
 
   dispose(): void {
     if (this.disposed) return
     this.disposed = true
+    this.approvals.cancelAll('会话已关闭')
+    this.unsubscribeActivities?.()
+    this.unsubscribeActivities = null
     if (this.saveTimer) clearTimeout(this.saveTimer)
     this.saveTimer = null
     this.kernel.cancelPreparation()
@@ -218,7 +244,28 @@ export class SessionRuntime {
   // Reason: pool-side rename must reach the runtime's local copy — flushSave
   // would otherwise resurrect the stale title on the next save.
   applySessionMeta(session: ChatSession): void {
-    this.session = { ...this.session, title: session.title, pageUrl: session.pageUrl, updatedAt: session.updatedAt }
+    if (session.permissionMode !== this.session.permissionMode) this.approvals.cancelAll('权限模式已变化', false)
+    this.session = { ...this.session, title: session.title, pageUrl: session.pageUrl, updatedAt: session.updatedAt, permissionMode: session.permissionMode }
+  }
+
+  async setPermissionMode(mode: PermissionMode): Promise<void> {
+    if (mode !== 'ask' && mode !== 'auto' && mode !== 'allow') return
+    const previous = this.session.permissionMode
+    this.approvals.cancelAll('权限模式已变化', false)
+    this.session = { ...this.session, permissionMode: mode, messages: this.kstate.messages, messageCount: this.kstate.messages.length, updatedAt: Date.now() }
+    this.onSessionUpdated?.(this.session)
+    this.bump()
+    try {
+      await this.env.saveSession(this.session)
+    } catch (error) {
+      if (this.session.permissionMode === mode) {
+        this.approvals.cancelAll('权限模式保存失败', false)
+        this.session = { ...this.session, permissionMode: previous }
+        this.onSessionUpdated?.(this.session)
+        this.bump()
+      }
+      throw error
+    }
   }
 
   // --- page context (craton input) ---
@@ -298,11 +345,14 @@ export class SessionRuntime {
             proxyTools[m.qualifiedName] = dynamicTool({
               description: m.description,
               inputSchema: jsonSchema(m.inputSchema),
-              execute: async (args: unknown, { abortSignal }: { abortSignal?: AbortSignal }) => {
+              execute: async (args: unknown, { abortSignal, toolCallId }: { abortSignal?: AbortSignal; toolCallId: string }) => {
                 const responsePromise = this.env.sendMessage({
                   type: 'mcp:call-tool',
                   qualifiedName: m.qualifiedName,
                   args,
+                  sessionId: this.sessionId,
+                  toolCallId,
+                  approval: this.approvals.getApproval(toolCallId),
                   // Reason: consent routing and site attribution should name
                   // the page the turn is operating on, not whichever tab the
                   // user switched to. Peek (never seed) — a pure-MCP turn must
@@ -356,11 +406,12 @@ export class SessionRuntime {
       const agent = await createAgent(
         config, this.pageContextRef, this.pageImagesRef, this.debugStatusRef,
         this.sessionIdRef, this.hostnameRef, tools, () => {},
-        { getSessionId: () => this.sessionId, getTabId: () => this.timerTabId ?? this.hooks.getCurrentTabId(), isPinned: () => this.timerTabId != null, getTurnPage: () => this.currentTurnPage, getStepLimit: () => this.timerWake?.kind === 'monitor' ? 20 : undefined },
+        { getSessionId: () => this.sessionId, getTabId: () => this.timerTabId ?? this.canvasTabId ?? this.hooks.getCurrentTabId(), isPinned: () => this.timerTabId != null || this.canvasTabId != null, getTurnPage: () => this.currentTurnPage, getStepLimit: () => this.timerWake?.kind === 'monitor' ? 20 : undefined },
         this.session.mode ?? 'chat',
         // Reason: multiplexed runtimes cannot share the module-level craton
         // singleton — this runtime owns its inspector-visible frozen prompt.
         (craton) => { if (!signal?.aborted && generation === this.buildGeneration) this.craton = craton },
+        this.approvals,
       )
       signal?.throwIfAborted()
       if (generation !== this.buildGeneration) return
@@ -520,6 +571,7 @@ export class SessionRuntime {
     // Reason: protocol v2 — visible text, skill/element data parts and UI
     // flags stay structured; expandForModel composes model input at send time.
     const metadata: SidekickMetadata = { v: 2 }
+    if (opts?.canvasSource) metadata.canvasSource = { canvasId: opts.canvasSource.canvasId, title: opts.canvasSource.title }
     if (opts?.fromBridge) metadata.source = 'claude-code'
     if (opts?.timer) { metadata.source = 'timer'; metadata.timer = opts.timer }
     // Reason: same provenance contract as the panel send path — the reply's
@@ -535,7 +587,7 @@ export class SessionRuntime {
     // SDK only appends the message when sendMessage runs at the end of it. The
     // commit further down reuses this id, so the placeholder is replaced in
     // place instead of being followed by a second copy.
-    const pendingId = crypto.randomUUID()
+    const pendingId = item.id
     const pendingParts = buildUserParts({ text, attachments, skill: opts?.skill, savedFiles: savedFileParts(attachments) })
     if (pendingParts.length === 0) {
       this.kernel.releaseHandoff()
@@ -586,7 +638,7 @@ export class SessionRuntime {
       // Reason: commit a fresh object — the metadata pushed above must never be
       // mutated in place, since the kernel state holds that very reference.
       const finalMetadata: SidekickMetadata = attachmentNotes ? { ...metadata, attachmentNotes } : metadata
-      const parts = buildUserParts({ text, attachments, skill: opts?.skill, savedFiles })
+      const parts = buildUserParts({ text, attachments, skill: opts?.skill, savedFiles, canvasContext: opts?.canvasContext })
       if (parts.length === 0) {
         // Reason: nothing survived to send after all — retract the placeholder
         // rather than leave a bubble with no request behind it.
@@ -596,6 +648,15 @@ export class SessionRuntime {
       }
       // Reason: messageId commits into the placeholder pushed above — same id,
       // same position, so the bubble never duplicates or flickers.
+      if (opts?.canvasContext?.length) {
+        const index = this.kstate.messages.findIndex(m => m.id === pendingId)
+        this.kstate.replaceMessage(index, { id: pendingId, role: 'user', parts, metadata: finalMetadata })
+        await this.env.saveSession({ ...this.session, messages: this.kstate.messages, updatedAt: Date.now() }).catch(error => {
+          this.kstate.error = error instanceof Error ? error : new Error(String(error))
+          throw error
+        })
+        if (this.disposed) return
+      }
       const handedOff = this.chat.sendMessage({ parts, metadata: finalMetadata, messageId: pendingId })
       // Reason: sendMessage flips status to 'submitted' synchronously — from now
       // on the status carries the turn, so this dispatch releases its flag.

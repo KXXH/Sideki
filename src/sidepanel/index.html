@@ -7,7 +7,12 @@
   <meta http-equiv="Content-Security-Policy" content="frame-src 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sideki</title>
-  <style>body{margin:0;padding:0;background:var(--color-surface,#fff)}</style>
+  <style>
+    /* Reason: keep the outer page from scrolling without suppressing native
+       overscroll effects on the nested chat scroller. */
+    html,body{height:100%;overflow:clip}
+    body{margin:0;padding:0;background:var(--color-surface,#fff)}
+  </style>
 </head>
 <body>
   <div id="root"></div>

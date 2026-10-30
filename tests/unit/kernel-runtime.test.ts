@@ -33,9 +33,27 @@ function makeEnv(): KernelEnv {
     updateSessionMeta: vi.fn().mockResolvedValue(undefined),
     deleteSession: vi.fn().mockResolvedValue(undefined),
     removeHistory: vi.fn().mockResolvedValue(undefined),
-    sendMessage: vi.fn().mockResolvedValue(undefined),
+    sendMessage: vi.fn(async (msg: { type?: string }) => msg.type === 'canvas:request' ? { success: true, result: [] } : undefined),
   }
 }
+
+describe('canvas context persistence', () => {
+  it('saves the immutable user snapshot before handing the request to the transport', async () => {
+    const env = makeEnv()
+    const snapshots = [{ canvasId: 'a', path: '/viz/a.html', title: 'A', modelRevision: 7, modelContent: { budget: 5000 } }]
+    ;(env.sendMessage as Mock).mockImplementation(async (msg: { type?: string; op?: string }) => msg.type === 'canvas:request' ? { success: true, result: msg.op === 'capture' ? snapshots : undefined } : undefined)
+    const rt = new SessionRuntime({ session: session('s', { messages: [] }), env, hooks: makeHooks(), getConfig: () => cfg })
+    const send = vi.spyOn(rt.chat, 'sendMessage').mockImplementation(async () => {
+      expect(env.saveSession).toHaveBeenCalledWith(expect.objectContaining({ messages: expect.arrayContaining([
+        expect.objectContaining({ parts: expect.arrayContaining([{ type: 'data-canvas-context', data: snapshots }]) }),
+      ]) }))
+    })
+    await rt.kernel.handleSend('重新计算')
+    expect(send).toHaveBeenCalledOnce()
+    expect(rt.kstate.messages[0].parts).toContainEqual({ type: 'data-canvas-context', data: snapshots })
+    rt.dispose()
+  })
+})
 
 function makeHooks(over: Partial<RuntimeHooks> = {}): RuntimeHooks {
   return {
@@ -63,6 +81,24 @@ beforeEach(() => {
 })
 
 describe('SessionRuntime construction', () => {
+  it('persists per-session permission changes including empty conversations', async () => {
+    const onSessionUpdated = vi.fn()
+    const { rt, env } = makeRuntime(session('permissions', { messages: [] }), { onSessionUpdated })
+    await rt.setPermissionMode('auto')
+    expect(rt.session.permissionMode).toBe('auto')
+    expect(env.saveSession).toHaveBeenCalledWith(expect.objectContaining({ permissionMode: 'auto', messages: [] }))
+    expect(onSessionUpdated).toHaveBeenCalledWith(expect.objectContaining({ permissionMode: 'auto' }))
+    rt.dispose()
+  })
+
+  it('rolls back a permission change when persistence fails', async () => {
+    const { rt, env } = makeRuntime(session('permissions', { permissionMode: 'ask' }))
+    vi.mocked(env.saveSession).mockRejectedValueOnce(new Error('storage failed'))
+    await expect(rt.setPermissionMode('allow')).rejects.toThrow('storage failed')
+    expect(rt.session.permissionMode).toBe('ask')
+    rt.dispose()
+  })
+
   it('loads the session messages into kernel state', () => {
     const { rt } = makeRuntime(session('a'))
     expect(rt.sessionId).toBe('a')
@@ -352,7 +388,7 @@ describe('SessionRuntime optimistic send', () => {
     let releaseCleanup!: () => void
     const cleanup = new Promise<void>(resolve => { releaseCleanup = resolve })
     const env = makeEnv()
-    ;(env.sendMessage as Mock).mockImplementation((m: { type: string }) => m.type === 'tab-lock:release' ? cleanup : Promise.resolve(undefined))
+    ;(env.sendMessage as Mock).mockImplementation((m: { type: string }) => m.type === 'tab-lock:release' ? cleanup : Promise.resolve(m.type === 'canvas:request' ? { success: true, result: [] } : undefined))
     const extractContent = vi.fn().mockReturnValue(new Promise(() => {}))
     const rt = new SessionRuntime({ session: session('a', { messages: [] }), env, hooks: makeHooks({ extractContent }), getConfig: () => cfg })
     try {
@@ -381,7 +417,7 @@ describe('SessionRuntime optimistic send', () => {
     const gate = new Promise(resolve => { release = resolve })
     const { rt, env } = makeRuntime(session('a', { messages: [] }))
     if (stage === 'mcp') {
-      ;(env.sendMessage as Mock).mockImplementation((msg: { type: string }) => msg.type === 'mcp:ensure' ? gate : Promise.resolve(undefined))
+      ;(env.sendMessage as Mock).mockImplementation((msg: { type: string }) => msg.type === 'mcp:ensure' ? gate : Promise.resolve(msg.type === 'canvas:request' ? { success: true, result: [] } : undefined))
     } else {
       ;(createAgent as Mock).mockReturnValueOnce(gate)
     }
@@ -537,6 +573,7 @@ describe('SessionRuntime lazy craton', () => {
     const env = makeEnv()
     let mcpCalls = 0
     ;(env.sendMessage as Mock).mockImplementation(async (msg: { type?: string }) => {
+      if (msg?.type === 'canvas:request') return { success: true, result: [] }
       if (msg?.type !== 'mcp:ensure') return undefined
       mcpCalls++
       if (mcpCalls === 1) throw new Error('mcp down')

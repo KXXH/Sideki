@@ -4,7 +4,7 @@
 
 Sideki 是 Manifest V3 Chrome 侧面板 AI 助手，提供页面理解、浏览器自动化、PDF 阅读批注、内嵌画布、定时唤醒与 CDP 调试。React + TypeScript + Vite + TailwindCSS v4，使用 Vercel AI SDK 7。
 
-产品与 `manifest.name` 均为 **Sideki**。兼容性标识仍用 `sidekick`：npm 包名、内部 `SidekickKernel` / `useSidekickChat` 类型与函数、存储键、备份格式、服务目录和 MCP client name 不因品牌改名而替换。更新应在原加载目录重新加载现有扩展，不能把换目录或卸载重装当作普通升级。
+产品与 `manifest.name` 均为 **Sideki**，MCP OAuth 的展示元数据 `client_name` 同样使用 Sideki。兼容性标识仍用 `sidekick`：npm 包名、内部 `SidekickKernel` / `useSidekickChat` 类型与函数、存储键、备份格式和服务目录不因品牌改名而替换。已有 OAuth `client_id`、token 和存储键保持不变；授权服务可能继续展示旧注册名称，不因改名自动清除授权或重新注册客户端。更新应在原加载目录重新加载现有扩展，不能把换目录或卸载重装当作普通升级。
 
 详细技术文档从 [docs/README.md](docs/README.md) 开始，以源码为准；历史行为看 `CHANGELOG.md`。
 

@@ -1,5 +1,6 @@
 import { tool } from 'ai'
 import { z } from 'zod'
+import { toolDescriptionInput } from './tool-description'
 import { getActiveSessionId } from './bridge'
 import type { ToolCallCtx } from './bridge'
 import { canProbeInThisDocument, probeVisualization, requestProbeFromUi } from '../viz-probe'
@@ -77,16 +78,22 @@ The returned render report is a check by a hidden sandbox in an available UI: ok
 
 The shared theme variables are --seed-fg, --seed-muted, --seed-primary, --border-standard, --border-subtle, --card-bg, --inset-bg, --fill-1..3, --font-sans, --font-code, --viz-series-1..6. Load the canvas skill for authoring and responsive layout guidance.`,
     inputSchema: z.object({
+      description: toolDescriptionInput,
       path: z.string().describe('VFS path of the self-contained HTML document or fragment under /viz/ (write it with bash first)'),
       title: z.string().max(120).optional().describe('Optional title; also seeds the snapshot filename'),
       network: z.boolean().optional().describe('Allow https:// resources and runtime network calls in the rendered frame. Default false: fully offline. Enable only when live data or a CDN library is required.'),
     }),
-    execute: async ({ path, title, network }) => {
+    execute: async ({ path, title, network }, { toolCallId }) => {
       const sessionId = ctx?.getSessionId?.() || getActiveSessionId()
       if (!sessionId) {
         throw new Error('visualize: no active session. The tool must run inside a chat session so its virtual filesystem is available.')
       }
       validateSourcePath(path)
+      const approval = ctx?.getApproval?.(toolCallId)
+      if (approval) {
+        const granted = await chrome.runtime.sendMessage({ type: 'approval:claim', approval, toolName: 'visualize', args: { path, title, network } })
+        if (!granted?.success) throw new Error(granted?.reason ?? granted?.error ?? '调用授权已失效')
+      }
 
       let read: { success?: boolean; content?: string; error?: string } | undefined
       try {
@@ -122,7 +129,8 @@ The shared theme variables are --seed-fg, --seed-muted, --seed-primary, --border
         ? await probeVisualization({ sessionId, path: snapshotPath, network: networked })
         : await requestProbeFromUi({ sessionId, path: snapshotPath, network: networked })
 
-      return { path: snapshotPath, previewPath: buildVfsPreviewLink(snapshotPath, networked), title: title ?? basenameWithoutExt(path), network: networked, render }
+      const canvasId = toolCallId || `path:${snapshotPath}`
+      return { path: snapshotPath, previewPath: buildVfsPreviewLink(snapshotPath, networked, canvasId), canvasId, title: title ?? basenameWithoutExt(path), network: networked, render }
     },
   })
 }

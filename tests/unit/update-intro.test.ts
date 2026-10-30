@@ -194,7 +194,7 @@ describe('update theme selection', () => {
     expect(chrome.storage.local.set).not.toHaveBeenCalled()
     vi.mocked(chrome.storage.local.get).mockResolvedValue({ sidekick_config: { ...originalConfig, model: 'newer-model' } })
     await click(button('开始使用'))
-    expect(chrome.storage.local.set).toHaveBeenCalledWith({ sidekick_config: { ...originalConfig, model: 'newer-model', accentColor: 'swiss', yoloMode: false } })
+    expect(chrome.storage.local.set).toHaveBeenCalledWith({ sidekick_config: { ...originalConfig, model: 'newer-model', accentColor: 'swiss', yoloMode: false, defaultPermissionMode: 'ask' } })
     expect(onClose).toHaveBeenCalledOnce()
   })
 

@@ -1,5 +1,5 @@
 import { ToolLoopAgent, stepCountIs } from 'ai'
-import type { ModelMessage } from 'ai'
+import type { ModelMessage, ToolSet } from 'ai'
 import { createProvider, sdkReasoningEffort } from './ai-provider'
 import { truncateToContextWindow } from './api'
 import { stepBudgetStage } from './format'
@@ -8,6 +8,7 @@ import type { ApiConfig, PageContent } from './types'
 import { getSkillIndex } from './skills'
 import { getGlobalMemory, getSiteMemory } from './memory-storage'
 import { HTML_ARTIFACT_CAPABILITIES } from './html-artifact'
+import type { ApprovalService } from './approval-service'
 
 // Reason: shared command docs eliminate duplication between chat and pro prompts.
 // Both modes have the same page/chrome commands available via bash.
@@ -357,6 +358,7 @@ export async function createAgent(
   toolCtx?: import('./tools/bridge').ToolCallCtx,
   sessionMode: 'chat' | 'pro' = 'chat',
   onCraton?: (snapshot: CratonSnapshot) => void,
+  approvalService?: ApprovalService,
 ) {
   const wantsReasoning = !!config.reasoningEffort && config.reasoningEffort !== 'none'
   const model = createProvider(config, {
@@ -374,14 +376,32 @@ export async function createAgent(
 
   // Reason: per-session tool binding — multiplexed kernels must not share
   // the module-level session/tab singletons.
-  const baseTools = toolCtx ? createAgentTools(toolCtx) : agentTools
+  const scopedToolCtx = approvalService ? { ...toolCtx, getApproval: approvalService.getApproval } : toolCtx
+  const baseTools = scopedToolCtx ? createAgentTools(scopedToolCtx) : agentTools
   const allTools = mcpTools ? { ...baseTools, ...mcpTools } : baseTools
+  // Reason: grants cover exactly one execution, including Bash's nested commands.
+  // Cleanup belongs at the outer tool boundary, not individual browser effects.
+  const executionTools = approvalService ? Object.fromEntries(Object.entries(allTools).map(([name, raw]) => {
+    const definition = raw as ToolSet[string]
+    const execute = definition.execute
+    return [name, execute ? {
+      ...definition,
+      execute: async (...args: Parameters<NonNullable<typeof execute>>) => {
+        approvalService.beginExecution(args[1].toolCallId)
+        let executionError: string | undefined
+        try { return await execute(...args) }
+        catch (error) { executionError = error instanceof Error ? error.message : String(error); throw error }
+        finally { await approvalService.finish(args[1].toolCallId, executionError) }
+      },
+    } : definition]
+  })) as typeof allTools : allTools
 
   const maxSteps = config.maxToolRounds > 0 ? config.maxToolRounds : 100
 
   return new ToolLoopAgent({
     model,
-    tools: allTools,
+    tools: executionTools,
+    ...(approvalService ? { toolApproval: async ({ toolCall }: { toolCall: { toolCallId: string; toolName: string; input: unknown } }) => approvalService.review(toolCall) } : {}),
     instructions: buildAgentIdentity(config),
     stopWhen: stepCountIs(maxSteps),
     // Reason: SDK 7 maps reasoning to provider-native format (reasoning_effort for openai-compatible)

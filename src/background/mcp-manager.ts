@@ -1,6 +1,7 @@
 import { McpClientManager, probeMcpServer, authMcpServer } from '../shared/mcp-client'
 import { loadConfig } from '../shared/storage'
 import { requireConsent } from './tool-handlers'
+import type { ExecutionApproval } from '../shared/approval-types'
 import type { McpServerConfig } from '../shared/types'
 
 const manager = new McpClientManager()
@@ -20,6 +21,7 @@ export async function handleMcpMessage(
   type: string,
   message: Record<string, unknown>,
   tabId: number,
+  authorization?: ExecutionApproval,
 ): Promise<unknown> {
   switch (type) {
     // Reason: one entry point for "give me the current MCP tools". The server
@@ -39,10 +41,14 @@ export async function handleMcpMessage(
       const summary = Object.keys(toolArgs).length > 0
         ? `${toolName}(${Object.keys(toolArgs).join(', ')})`
         : toolName
-      if (!await requireConsent('mcp', summary, tabId)) {
+      const granted = authorization
+        ? await requireConsent('mcp', summary, tabId, undefined, authorization)
+        : await requireConsent('mcp', summary, tabId)
+      if (!granted) {
         return { error: 'Action denied by user' }
       }
       await ensureConnected()
+      if (authorization && !authorization.isActive()) return { error: '调用授权已失效' }
       return await manager.callTool(toolName, toolArgs)
     }
     default:

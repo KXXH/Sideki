@@ -553,14 +553,56 @@
       let reportedErrors = new Set();
       let documentAttributes = [];
       let bodyAttributes = [];
+      let widgetState = { modelContent: null, privateContent: null };
+      let widgetRevision = 0;
+      let sdkEnabled = false;
+      const sdkPending = new Map();
+
+      function applyWidgetState(state, revision, notify = true) {
+        if (!state || typeof state !== 'object' || !Number.isSafeInteger(revision) || revision < widgetRevision) return;
+        if (revision === widgetRevision && JSON.stringify(state) === JSON.stringify(widgetState)) return;
+        widgetState = structuredClone(state);
+        widgetRevision = revision;
+        if (notify) window.dispatchEvent(new CustomEvent('sideki:statechange', { detail: { widgetState: structuredClone(widgetState), revision } }));
+      }
+
+      function sdkRequest(method, args) {
+        if (!sdkEnabled || currentId === null) return Promise.reject(new Error('当前渲染环境不支持画布回调'));
+        if (sdkPending.size >= 20) return Promise.reject(new Error('画布请求过多，请等待上一批请求完成'));
+        return new Promise((resolve, reject) => {
+          const requestId = crypto.randomUUID();
+          const timer = setTimeout(() => {
+            sdkPending.delete(requestId);
+            post({ type: 'viz:cancel', id: currentId, requestId });
+            reject(new Error('画布请求超时'));
+          }, method === 'sendFollowUpMessage' ? 600000 : 15000);
+          sdkPending.set(requestId, { resolve, reject, timer });
+          try {
+            if (post({ type: 'viz:request', id: currentId, requestId, method, args }) === false) throw new Error('画布请求必须是可序列化的数据');
+          }
+          catch (error) { clearTimeout(timer); sdkPending.delete(requestId); reject(error); }
+        });
+      }
+
+      Object.defineProperty(window, 'sideki', {
+        configurable: false,
+        writable: false,
+        value: Object.freeze({
+          get widgetState() { return structuredClone(widgetState); },
+          setWidgetState(state) { return sdkRequest('setWidgetState', state); },
+          sendFollowUpMessage(args) { return sdkRequest('sendFollowUpMessage', args); },
+        }),
+      });
 
       function post(message) {
         try {
           if (window.parent && window.parent !== window) {
             window.parent.postMessage(message, '*');
+            return true;
           }
         } catch {
           // Reason: the parent frame can be torn down while a render is settling.
+          return false;
         }
       }
 
@@ -890,9 +932,18 @@
         }
       }
 
-      async function render(id, html, theme) {
+      async function render(id, html, theme, sdk) {
         teardown();
         currentId = id;
+        for (const pending of sdkPending.values()) {
+          clearTimeout(pending.timer);
+          pending.reject(new Error('画布已重新加载'));
+        }
+        sdkPending.clear();
+        sdkEnabled = sdk?.enabled === true;
+        widgetRevision = 0;
+        widgetState = { modelContent: null, privateContent: null };
+        if (sdkEnabled) applyWidgetState(sdk.widgetState, sdk.revision, false);
 
         resetPage();
 
@@ -984,10 +1035,28 @@
           if (typeof data.id !== 'string' || data.id === '') return;
           const html = typeof data.html === 'string' ? data.html : '';
           try {
-            render(data.id, html, data.theme).catch((error) => postError('Failed to render HTML: ' + errorMessage(error)));
+            render(data.id, html, data.theme, data.sideki).catch((error) => postError('Failed to render HTML: ' + errorMessage(error)));
           } catch (error) {
             postError('Failed to render visualization: ' + errorMessage(error));
           }
+          return;
+        }
+
+        if (data.id !== currentId) return;
+        if (data.type === 'viz:response') {
+          const pending = sdkPending.get(data.requestId);
+          if (!pending) return;
+          sdkPending.delete(data.requestId);
+          clearTimeout(pending.timer);
+          if (typeof data.error === 'string') pending.reject(new Error(data.error));
+          else {
+            if (data.result?.widgetState) applyWidgetState(data.result.widgetState, data.result.revision);
+            pending.resolve(data.result?.widgetState ? { revision: data.result.revision } : data.result);
+          }
+          return;
+        }
+        if (data.type === 'viz:state') {
+          applyWidgetState(data.state, data.revision);
           return;
         }
 

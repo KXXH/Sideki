@@ -14,6 +14,7 @@ import {
   lockedTabsSnapshot,
   registerTabLockListeners,
   setPageLockIndicatorPreference,
+  updateTurnActivity,
   __resetTabLocks,
 } from '../../src/background/tab-locks'
 
@@ -33,6 +34,29 @@ describe('tab-locks: turn-scoped tab stack', () => {
     const r = await resolveOperatingTab(A, 42, true)
     expect(r.tabId).toBe(42)
     expect(ownerOf(42)).toBe(A)
+  })
+
+  it('routes descriptions only to the owning stack, carries them through navigation and clears on release', async () => {
+    const activity = [{ id: 'call', description: '读取页面标题', phase: 'executing' }]
+    const injections = () => vi.mocked(chrome.scripting.executeScript).mock.calls
+      .map(c => c[0] as { target?: { tabId?: number }; args?: unknown[]; func?: { name: string } })
+      .filter(c => c.func?.name === 'installLockIndicator')
+    vi.mocked(chrome.scripting.executeScript).mockClear()
+    updateTurnActivity(B, activity)
+    expect(injections()).toHaveLength(0)
+    await resolveOperatingTab(A, 42, true)
+    updateTurnActivity(A, activity)
+    expect(injections().at(-1)?.target?.tabId).toBe(42)
+    expect(injections().at(-1)?.args?.[4]).toEqual(activity)
+    noteNavigationTarget(42, 43)
+    expect(injections().at(-1)?.target?.tabId).toBe(43)
+    expect(injections().at(-1)?.args?.[4]).toEqual(activity)
+    releaseTurn(A)
+    const count = injections().length
+    updateTurnActivity(A, activity)
+    expect(injections()).toHaveLength(count)
+    await resolveOperatingTab(B, 43, true)
+    expect(injections().at(-1)?.args?.[4]).toBeUndefined()
   })
 
   it('resolves an unpinned anchor to the active tab of its window', async () => {

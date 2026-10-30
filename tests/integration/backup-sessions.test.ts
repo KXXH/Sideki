@@ -219,7 +219,7 @@ describe('backup delta sync', () => {
     await vi.waitFor(() => { expect(client.getSyncState().phase).toBe('syncing') })
     expect(socket.sent).toEqual([
       { type: 'push', category: 'session', key: 'a', data: session('a') },
-      { type: 'push', category: 'config', key: 'config', data: { endpoint: 'synthetic', yoloMode: true } },
+      { type: 'push', category: 'config', key: 'config', data: { endpoint: 'synthetic', yoloMode: true, defaultPermissionMode: 'allow' } },
       { type: 'push', category: 'userSkills', key: 'userSkills', data: { demo: 'content' } },
       { type: 'push', category: 'customActions', key: 'customActions', data: ['action'] },
       { type: 'push', category: 'history', key: 'a', data: ['archive'] },

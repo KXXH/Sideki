@@ -5,6 +5,8 @@ export const USAGE_MAX_BYTES = 1024 * 1024
 export const USAGE_FIELDS = ['input', 'output', 'read', 'write', 'reasoning'] as const
 export type UsageField = typeof USAGE_FIELDS[number]
 export type TokenCounts = Record<UsageField, number | null>
+export type UsageSource = 'main' | 'approval'
+export const USAGE_SOURCE_LABELS: Record<UsageSource, string> = { main: '主会话', approval: '自动审批' }
 
 export interface UsageEvent {
   id: string
@@ -14,10 +16,12 @@ export interface UsageEvent {
   name: string
   model: string
   tokens: TokenCounts
+  source?: UsageSource
 }
 
 export interface UsageRow {
   day: string
+  lastAt?: number
   session: string
   provider: string
   name: string
@@ -25,6 +29,26 @@ export interface UsageRow {
   calls: number
   tokens: Record<UsageField, number>
   missing: Record<UsageField, number>
+  source?: UsageSource
+}
+
+export function usageSource(row: Pick<UsageRow, 'session' | 'source'>): UsageSource {
+  // Reason: old approval requests used a synthetic session ID and cannot be linked back to a parent chat.
+  return row.source ?? (row.session.startsWith('approval:') ? 'approval' : 'main')
+}
+
+export function isLegacyApprovalUsage(row: Pick<UsageRow, 'session' | 'source'>): boolean {
+  return usageSource(row) === 'approval' && row.session.startsWith('approval:')
+}
+
+export function usageSessionLabel(row: Pick<UsageRow, 'session' | 'source'>, names: Record<string, string>): string {
+  if (isLegacyApprovalUsage(row)) return '历史自动审批（未关联会话）'
+  return row.session ? names[row.session] ?? `已删除会话 · ${row.session.slice(0, 8)}` : '后台任务'
+}
+
+export function usageLastAt(row: Pick<UsageRow, 'day' | 'lastAt'>): number {
+  // Reason: legacy rows only establish a calendar day; chat metadata changes are not evidence of model usage.
+  return row.lastAt ?? new Date(`${row.day}T00:00:00`).getTime()
 }
 
 export interface UsageStore {
@@ -70,6 +94,7 @@ export function isUsageEvent(value: unknown): value is UsageEvent {
   if (!value || typeof value !== 'object') return false
   const e = value as UsageEvent
   return typeof e.id === 'string' && e.id.length > 0 && e.id.length <= 100
+    && (e.source === undefined || e.source === 'main' || e.source === 'approval')
     && Number.isFinite(e.at) && e.at > 0 && e.at < 8.64e15
     && ['session', 'provider', 'name', 'model'].every(key => {
       const value = e[key as keyof UsageEvent]
@@ -99,12 +124,14 @@ export function recordUsage(store: UsageStore | undefined, event: UsageEvent, no
   const day = localUsageDay(new Date(event.at))
   if (day < usageDays(USAGE_RETENTION_DAYS, now)[0]) return current
   const rows = current.rows.slice()
+  const source = usageSource(event)
   const index = rows.findIndex(row => row.day === day && row.session === event.session
-    && row.provider === event.provider && row.model === event.model)
+    && row.provider === event.provider && row.model === event.model && usageSource(row) === source)
   const existing = rows[index]
   const row: UsageRow = existing
-    ? { ...existing, name: event.name, tokens: { ...existing.tokens }, missing: { ...existing.missing } }
-    : { day, session: event.session, provider: event.provider, name: event.name, model: event.model, ...emptyUsageTotals() }
+    ? { ...existing, source, name: event.name, tokens: { ...existing.tokens }, missing: { ...existing.missing } }
+    : { day, session: event.session, source, provider: event.provider, name: event.name, model: event.model, ...emptyUsageTotals() }
+  row.lastAt = Math.max(existing?.lastAt ?? 0, event.at)
   row.calls++
   for (const field of USAGE_FIELDS) {
     const value = event.tokens[field]
@@ -142,13 +169,14 @@ function csvCell(value: string | number): string {
 }
 
 export function usageCsv(rows: UsageRow[], sessionNames: Record<string, string> = {}): string {
-  const headers = ['date', 'provider_id', 'provider', 'model', 'session_id', 'session', 'requests',
+  const headers = ['date', 'provider_id', 'provider', 'model', 'session_id', 'session', 'source', 'requests',
     'input', 'output', 'cache_read', 'cache_write', 'reasoning',
-    ...USAGE_FIELDS.map(field => `${field}_missing_requests`)]
+    ...USAGE_FIELDS.map(field => `${field}_missing_requests`), 'last_used_at']
   return '\uFEFF' + [headers.map(csvCell).join(','), ...rows.map(row => [
     row.day, row.provider, row.name, row.model, row.session,
-    row.session ? sessionNames[row.session] ?? row.session : '后台任务', row.calls,
+    usageSessionLabel(row, sessionNames), usageSource(row), row.calls,
     ...USAGE_FIELDS.map(field => row.missing[field] === row.calls ? '' : row.tokens[field]),
     ...USAGE_FIELDS.map(field => row.missing[field]),
+    row.lastAt == null ? '' : new Date(row.lastAt).toISOString(),
   ].map(csvCell).join(','))].join('\r\n')
 }

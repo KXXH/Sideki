@@ -35,6 +35,7 @@ import { ACTION_PROMPTS, CHAT_EMPTY_STATE, PRO_EMPTY_STATE } from "../empty-stat
 import AttachmentPreview from "../components/AttachmentPreview";
 import ComposerActions from "../components/ComposerActions";
 import ChatComposer from "../components/ChatComposer";
+import PermissionModeSwitcher from "../components/PermissionModeSwitcher";
 import ModelSwitcher from "../components/ModelSwitcher";
 import { EmptyContextMeter } from "../components/ContextMeter";
 import { useElementPicker } from "../hooks/useElementPicker";
@@ -147,6 +148,9 @@ export default function ChatView({
     compacting,
     compactNow,
     config,
+    permissionMode,
+    setPermissionMode,
+    approvalState,
     relayedIds,
     debugStatusRef,
   } = useSidekickChat(pageInfo, pageContent, activeTabId, extractContent, proMode, contextLocked, kernelHost);
@@ -673,7 +677,7 @@ export default function ChatView({
           // opaque floating top bar, whose height is measured at runtime.
           '--chat-top-bar-height': `${topBarH}px`,
         } as React.CSSProperties}
-        className="relative h-full overflow-y-auto overflow-x-hidden"
+        className="relative h-full overflow-y-auto overflow-x-hidden overscroll-y-contain"
       >
         {emptySession ? (
           <EmptyState
@@ -696,6 +700,7 @@ export default function ChatView({
                           <div key={msg.id} className="opacity-40">
                             <MessageBubble
                               message={msg as UIMessage}
+                              toolCallDisplay={config?.toolCallDisplay}
                               isStreaming={false}
                               isLast={false}
                             />
@@ -740,6 +745,8 @@ export default function ChatView({
                 <MessageBubble
                   key={key}
                   message={msg}
+                  toolCallDisplay={config?.toolCallDisplay}
+                  approvalState={approvalState}
                   isStreaming={
                     isStreaming &&
                     i === messages.length - 1 &&
@@ -1051,6 +1058,11 @@ export default function ChatView({
                     config={config}
                     disabled={status === "streaming" || status === "submitted" || compacting || sending}
                     onOpenSettings={onOpenSettings}
+                  />
+                  <PermissionModeSwitcher
+                    value={permissionMode}
+                    onChange={setPermissionMode}
+                    disabled={!activeId || sending || stopping}
                   />
                 </>
               ) : null}

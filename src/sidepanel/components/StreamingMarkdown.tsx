@@ -1,5 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, type ReactNode, type HTMLAttributes, type AnchorHTMLAttributes, type MouseEvent } from 'react'
-import { Streamdown, useIsCodeFenceIncomplete, type AnimateOptions, type Components } from 'streamdown'
+import { Streamdown, defaultRehypePlugins, useIsCodeFenceIncomplete, type AnimateOptions, type Components } from 'streamdown'
+import type { Root, RootContent } from 'hast'
 import { createMathPlugin } from '@streamdown/math'
 import { cjk } from '@streamdown/cjk'
 import 'katex/dist/katex.min.css'
@@ -9,6 +10,26 @@ import { iconCopy, iconCheck } from '../../shared/icons'
 import { requestHighlight } from '../code-highlight'
 import type { ApiConfig } from '../../shared/types'
 import { buildHtmlPreviewUrl, parseVfsPreviewLink } from '../../shared/html-artifact'
+import VfsImage, { VfsImageProvider } from './VfsImage'
+
+function rehypeVfsImages() {
+  return (tree: Root) => {
+    const visit = (node: Root | RootContent) => {
+      if (node.type === 'element' && node.tagName === 'img' && typeof node.properties.src === 'string') {
+        let path = node.properties.src
+        try { path = decodeURIComponent(path) } catch { /* keep invalid paths for the error state */ }
+        // Reason: only VFS images need a custom renderer; preserve Streamdown's network image controls.
+        if (/^\/(tmp|page|viz)\//.test(path)) node.tagName = 'vfs-image'
+      }
+      if ('children' in node) node.children.forEach(visit)
+    }
+    visit(tree)
+  }
+}
+
+// Reason: identify sanitized VFS paths before harden normalizes URL traversal;
+// remote images still pass through the original hardening and renderer.
+const rehypePlugins = [defaultRehypePlugins.raw, defaultRehypePlugins.sanitize, rehypeVfsImages, defaultRehypePlugins.harden]
 
 const mathDefault = createMathPlugin({ singleDollarTextMath: false })
 const mathSingleDollar = createMathPlugin({ singleDollarTextMath: true })
@@ -205,6 +226,7 @@ function MarkdownLink({ href, children, node, className, onClick, ...props }: Ma
 }
 
 const components: Components = {
+  'vfs-image': ({ src, alt, title }) => <VfsImage src={String(src ?? '')} alt={typeof alt === 'string' ? alt : undefined} title={typeof title === 'string' ? title : undefined} />,
   h1: ({ children }) => <Heading level={1}>{children}</Heading>,
   h2: ({ children, id, className }) => className?.includes('sr-only')
     ? <h2 id={id} className="sr-only">{children}</h2>
@@ -265,7 +287,7 @@ function VfsLink({ path, sessionId, children }: { path: string; sessionId: strin
 
   const handleClick = async () => {
     if (canPreview) {
-      const url = buildHtmlPreviewUrl(chrome.runtime.getURL('src/preview/index.html'), sessionId, filePath, target.network)
+      const url = buildHtmlPreviewUrl(chrome.runtime.getURL('src/preview/index.html'), sessionId, filePath, target.network, target.canvasId)
       chrome.tabs.create({ url })
       return
     }
@@ -328,7 +350,9 @@ export default function StreamingMarkdown({ content, isStreaming, sessionId }: P
 
   return (
     <div className="markdown-content overflow-hidden px-0 py-3 select-text" style={{ fontFamily: 'var(--font-content)', fontSize: 'var(--font-content-size)' }}>
-      <Streamdown animated={streamingAnimation} isAnimating={isStreaming} plugins={{ math, cjk }} components={mergedComponents}>{content}</Streamdown>
+      <VfsImageProvider sessionId={sessionId}>
+        <Streamdown animated={streamingAnimation} isAnimating={isStreaming} plugins={{ math, cjk }} rehypePlugins={rehypePlugins} components={mergedComponents}>{content}</Streamdown>
+      </VfsImageProvider>
     </div>
   )
 }

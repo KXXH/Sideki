@@ -14,8 +14,9 @@ interface Props {
   direction?: 'up' | 'down'
 }
 
-export function ModelSwitcherTrigger({ label, open = false, ...props }: ComponentPropsWithRef<'button'> & { label: string; open?: boolean }) {
-  return <button {...props} type="button" className={`flex min-w-0 items-center gap-1 rounded-md px-1 py-1 text-[11px] transition-colors ${open ? 'bg-accent-wash text-accent' : 'text-text-secondary hover:bg-surface-overlay hover:text-text-primary'} disabled:opacity-50`}>
+export function ModelSwitcherTrigger({ label, open = false, tone = 'default', children, ...props }: ComponentPropsWithRef<'button'> & { label: string; open?: boolean; tone?: 'default' | 'warning' }) {
+  return <button {...props} type="button" className={`flex min-w-0 items-center gap-1 rounded-md px-1 py-1 text-[11px] transition-colors ${tone === 'warning' ? `text-warning ${open ? 'bg-warning/10' : 'hover:bg-warning/10'}` : open ? 'bg-accent-wash text-accent' : 'text-text-secondary hover:bg-surface-overlay hover:text-text-primary'} disabled:opacity-50`}>
+    {children}
     <span className="max-w-[120px] truncate">{label}</span>
     <Icon icon={iconChevronDown} className={`shrink-0 text-[10px] transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
   </button>

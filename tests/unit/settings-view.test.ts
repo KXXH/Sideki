@@ -62,6 +62,39 @@ async function toggle(label: string) {
   return vi.mocked(saveConfig).mock.calls.at(-1)![0]
 }
 
+it('defaults to descriptions and persists the tool presentation preference under appearance', async () => {
+  await render()
+  const button = control('显示工具操作描述')
+  expect(button.closest('section')?.id).toBe('s-appearance')
+  expect(button.getAttribute('aria-checked')).toBe('true')
+  expect((await toggle('显示工具操作描述')).toolCallDisplay).toBe('raw')
+  expect(button.getAttribute('aria-checked')).toBe('false')
+  expect((await toggle('显示工具操作描述')).toolCallDisplay).toBe('description')
+})
+
+it('restores a saved raw-tool preference', async () => {
+  vi.mocked(loadConfig).mockResolvedValue({ toolCallDisplay: 'raw' } as ApiConfig)
+  await render()
+  expect(control('显示工具操作描述').getAttribute('aria-checked')).toBe('false')
+})
+
+it('changes only the new-chat permission default without enabling network or legacy bypass flags', async () => {
+  await render()
+  expect(container.querySelector<HTMLInputElement>('input[name="default-permission-mode"][value="ask"]')?.checked).toBe(true)
+  expect(control('跳过操作确认')).toBeNull()
+  const radio = container.querySelector<HTMLInputElement>('input[name="default-permission-mode"][value="auto"]')!
+  await act(async () => radio.click())
+  await act(async () => vi.advanceTimersByTime(300))
+  expect(vi.mocked(saveConfig).mock.calls.at(-1)?.[0]).toMatchObject({ defaultPermissionMode: 'auto', securityLevel: 'strict', yoloMode: false })
+  const allow = container.querySelector<HTMLInputElement>('input[name="default-permission-mode"][value="allow"]')!
+  await act(async () => allow.click())
+  await act(async () => vi.advanceTimersByTime(300))
+  const saved = vi.mocked(saveConfig).mock.calls.at(-1)?.[0]
+  expect(saved).toMatchObject({ defaultPermissionMode: 'allow', securityLevel: 'strict', yoloMode: false })
+  expect(saved?.labFetch).not.toBe(true)
+  expect(container.textContent).not.toContain('我了解风险，开启')
+})
+
 it('keeps all four technical controls in a closed disclosure, enabled by default', async () => {
   await render()
   for (const label of ['后台内核（Offscreen）', '拟真操作', '异步脚本执行', 'LLM 后端兼容模式']) {

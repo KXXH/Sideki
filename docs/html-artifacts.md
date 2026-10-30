@@ -13,7 +13,7 @@
 | 默认离线 | 无网络请求；依赖内嵌，图片/字体/媒体可用 data:/blob: |
 | 显式联网 | 画布使用 `network: true`，新标签页仅使用 URL `network=1`；均允许 HTTPS 远程脚本/样式/图片等与 fetch、WSS socket，受 CSP/CORS 限制 |
 | 文件依赖 | 不提供相对路径、其他 VFS 文件或本地模块解析；内联或使用受支持的资源 URL |
-| 宿主能力 | 不提供 Chrome API、Node、本机文件、宿主页面 DOM 或回连 agent 的通道；不依赖浏览器已有登录态 |
+| 宿主能力 | 不提供 Chrome API、Node、本机文件或宿主页面 DOM；提供受限 `window.sideki` 状态/后续对话 SDK，不依赖浏览器已有登录态 |
 | 导航与嵌套 | 不支持外部导航、表单提交、iframe/object/embed/base/meta http-equiv；允许页内 `#fragment` 锚点 |
 | 动态编译 | 不支持 eval / Function 动态编译 |
 
@@ -42,7 +42,27 @@
 
 两宿主都按 iframe source 与 nonce 匹配 ready/render/error/resize 消息；新标签页文件读取 10 秒超时、沙箱渲染 12 秒超时。加载/运行错误不因后续 rendered 消息而抹去。
 
+### Markdown 内嵌图片
+
+聊天支持 `![截图](/tmp/screenshot.png)`，识别 `/tmp/`、`/page/`、`/viz/` 下的 PNG、JPEG、GIF、WebP 和 SVG（支持 URL 编码路径）。`StreamingMarkdown` 复用 VFS 链接路径校验，`VfsImage` 按消息所属 `sessionId` 读取当前文件并生成 Blob URL；SVG 只作为图片显示，不执行脚本。切换会话或路径、组件卸载时释放 URL，忽略过期读取结果。读取失败或图片损坏显示失败提示，不回退为网络请求；网络图片保留 Streamdown 原有渲染与控件。图片不是内容快照，也不实时订阅同路径文件变化。
+
+## 画布 SDK 与模型状态
+
+两个入口共用 `canvas-host.ts` 桥接与 `canvas-state.ts` 状态协议。`window.sideki.widgetState` 在生成脚本执行前恢复 `{ modelContent, privateContent }`；读取返回副本。`await sideki.setWidgetState(patch)` 按字段替换，省略保留、null 清空，每字段最多 8 KiB UTF-8 JSON，持久化成功后返回 revision。`sideki:statechange` 同步其他窗口的更新；恢复不调用 setWidgetState。隐藏 probe 的写入和发送明确 reject。
+
+状态以 `sidekick_canvas:{sessionId}` 持久化，按来源 canvasId 隔离，跨宿主使用 navigator.locks 串行化。新 visualize 结果以工具调用 ID 标识画布，previewPath 和新标签页 URL 带 canvas 参数；旧结果和独立 HTML 回退为 path 标识。删除会话同时删除画布状态。
+
+只有 modelContent 实际变化才增加 modelRevision 与会话内最近变化序号。普通人工消息入队前选最近 3 个发生模型状态变化的画布，再筛选 dirty 和未预留的版本，不用旧画布补满。快照随 SendItem 固定，`data-canvas-context` 在正式用户消息中保存，`expandForModel` 将其展开为明确标注为参考数据的 JSON；privateContent 不进入消息。定时任务、monitor 和 CC Bridge 不消费 dirty 状态。
+
+入队预留对应版本，取消/取回队列或发送提前失败时释放；正式消息落盘成功后推进 committedModelRevision，后续更新的版本保持 dirty。SW 重启保留预留，内核重建以新 owner 从已保存消息恢复提交版本，再清理丢失队列的旧预留。一个会话遵循现有单执行宿主约束，不提供运行中跨宿主热迁移。重试/重新生成继续使用消息保存的原快照。
+
+`await sideki.sendFollowUpMessage({ prompt, title? })` 在可信宿主显示目标会话、画布来源和消息正文，用户确认后才向来源会话排队。prompt 最多 4000 字符、title 最多 120 字符。来源画布当前状态始终计入最多 3 个名额，其余取最近的 dirty 候选。消息带 canvasSource provenance。缺少来源会话、后台尚未就绪、执行页面绑定失效或仅面板宿主未打开时明确返回错误，不切到其他会话、不选择当前活动页。离线/联网模式不改变此权限。
+
+请求使用 requestId 回执与有限去重缓存；双方限制并发，关闭或重载清理待完成请求与确认窗口。沙箱只接受父窗口消息，宿主只接受对应 iframe source 和渲染 nonce；frame 不能通过参数选择其他会话。
+
 ## 新标签页联网由 URL 唯一配置
+
+SDK 与联网模式相互独立，下面的 network Query 不授予额外的 agent 权限。
 
 新标签页只读取 URL Query 的 `network` 参数：
 

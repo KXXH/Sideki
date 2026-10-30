@@ -22,6 +22,7 @@ import {
 } from "../../shared/icons";
 import DataView from "./DataView";
 import { DEFAULT_CONFIG } from "../default-config";
+import { PERMISSION_MODES, PERMISSION_MODE_LABELS, PERMISSION_MODE_DESCRIPTIONS, resolveDefaultPermissionMode } from "../../shared/permission-mode";
 import UsageView from "./UsageView";
 import ModelServices from "../components/ModelServices";
 import iconChartBar from '@iconify-icons/mdi/chart-bar';
@@ -707,6 +708,12 @@ export default function SettingsView({ onBack, onShowUpdateIntro, onShowOnboardi
               onChange={() => updateField("collapseSteps", config.collapseSteps === false)}
             />
             <Toggle
+              on={config.toolCallDisplay !== "raw"}
+              label={t.toolCallDisplay}
+              description={t.toolCallDisplayDesc}
+              onChange={() => updateField("toolCallDisplay", config.toolCallDisplay === "raw" ? "description" : "raw")}
+            />
+            <Toggle
               on={!!config.labSingleDollarMath}
               label={t.singleDollarMath}
               description={t.singleDollarMathDesc}
@@ -1142,39 +1149,19 @@ export default function SettingsView({ onBack, onShowUpdateIntro, onShowOnboardi
 
         {/* 权限 */}
         <Section id="s-permissions" title={t.permissions} hint={t.permissionsHint}>
-          <Toggle
-            on={config.yoloMode || config.securityLevel === "permissive"}
-            label={t.skipConfirm}
-            description={
-              config.yoloMode || config.securityLevel === "permissive"
-                ? t.skipConfirmOn
-                : t.skipConfirmOff
-            }
-            color="error"
-            onChange={() => {
-              const enabled = config.yoloMode || config.securityLevel === "permissive";
-              if (!enabled) {
-                setConfirmDialog({
-                  title: t.skipConfirm,
-                  message:
-                    "开启后，AI 可以以你的身份操作任意网页，包括但不限于：",
-                  items: [
-                    "获取认证信息（Cookie、Token）",
-                    "修改文档内容",
-                    "操作银行转账、下单购买",
-                    "发送消息、删除数据",
-                  ],
-                  confirmLabel: "我了解风险，开启",
-                  confirmColor: "error",
-                  onConfirm: () => {
-                    updateFields({ securityLevel: "permissive", yoloMode: true, labFetch: true });
-                  },
-                });
-              } else {
-                updateFields({ securityLevel: "strict", yoloMode: false });
-              }
-            }}
-          />
+          <fieldset className="mb-4">
+            <legend className="text-xs font-medium text-text-primary">新对话默认权限</legend>
+            <p className="mt-1 mb-2 text-[11px] leading-relaxed text-text-muted">仅用于新建对话；当前对话可在输入框旁切换权限。</p>
+            <div className="flex flex-col gap-1">
+              {PERMISSION_MODES.map(mode => (
+                <label key={mode} className={`flex cursor-pointer items-start gap-2.5 rounded-lg px-3 py-2.5 transition-colors ${resolveDefaultPermissionMode(config) === mode ? "bg-accent-wash" : "hover:bg-surface-overlay"}`}>
+                  <input type="radio" name="default-permission-mode" value={mode} checked={resolveDefaultPermissionMode(config) === mode}
+                    onChange={() => updateField("defaultPermissionMode", mode)} className="mt-0.5 size-3.5 shrink-0 accent-[var(--color-accent)]" />
+                  <span className="min-w-0"><span className="block text-xs font-medium text-text-primary">{PERMISSION_MODE_LABELS[mode]}</span><span className="mt-0.5 block text-[11px] leading-relaxed text-text-muted">{PERMISSION_MODE_DESCRIPTIONS[mode]}{mode === "auto" && "；审批会额外调用模型，消耗 token，可能产生额外费用。"}</span></span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
           <Toggle
             on={!!config.labFetch}
             label={t.labFetch}

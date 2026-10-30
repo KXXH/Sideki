@@ -1,5 +1,5 @@
 import { Bash } from 'just-bash'
-import type { NetworkConfig } from 'just-bash'
+import type { IFileSystem, NetworkConfig } from 'just-bash'
 import { createPageCommands } from './shell-commands'
 import { createChromeCommand } from './chrome-commands'
 import { createDebugCommand } from './debug-commands'
@@ -9,6 +9,7 @@ import { loadConfig, loadSessionIndex } from '../shared/storage'
 import { getSkillFiles, isUserSkillDir, skillDirStatus, validateUserSkillsFromVfs, persistUserSkillChanges } from '../shared/skills'
 import { getMemoryFiles } from '../shared/memory-storage'
 import type { FsSnapshot } from '../shared/shell-storage'
+import type { ExecutionApproval } from '../shared/approval-types'
 import { VFS_UPLOAD_MAX_BYTES } from '../shared/vfs-upload'
 
 const MAX_STDOUT_LINES = 200
@@ -28,6 +29,7 @@ export const LARGE_MAX_FILE_SIZE = VFS_UPLOAD_MAX_BYTES
 export const LARGE_MAX_SESSION_SIZE = 64 * 1024 * 1024
 
 interface ShellInstance {
+  authorization?: ExecutionApproval
   bash: Bash
   tabId: number
   proMode: boolean
@@ -38,6 +40,30 @@ interface ShellInstance {
 const instances = new Map<string, ShellInstance>()
 const locks = new Map<string, Promise<unknown>>()
 const screenshotContexts = new Map<string, { sessionId: string; fs: Bash['fs']; proMode: boolean }>()
+
+const trackedFilesystems = new WeakMap<IFileSystem, { fs: IFileSystem; revision: number; pending: number }>()
+const FS_MUTATIONS = new Set(['writeFile', 'appendFile', 'mkdir', 'rm', 'cp', 'mv', 'chmod', 'utimes', 'symlink', 'link'])
+
+function trackFilesystem(source: IFileSystem): IFileSystem {
+  const existing = trackedFilesystems.get(source)
+  if (existing) return existing.fs
+  const state = { fs: source, revision: 0, pending: 0 }
+  for (const key of FS_MUTATIONS) {
+    const value = Reflect.get(source, key) as (...args: unknown[]) => Promise<unknown>
+    Object.defineProperty(source, key, {
+      configurable: true,
+      value: async (...args: unknown[]) => {
+        // Reason: invalidate before and after asynchronous mutations, including rollback.
+        state.revision++
+        state.pending++
+        try { return await value.apply(source, args) }
+        finally { state.pending--; state.revision++ }
+      },
+    })
+  }
+  trackedFilesystems.set(source, state)
+  return source
+}
 
 // Reason: upload capacity only changes storage-shaped limits. Execution time
 // and stdout truncation remain mode-specific, independent of image mirroring.
@@ -162,6 +188,7 @@ async function readonlyFilesForTab(tabId: number, proMode: boolean): Promise<Rec
 }
 
 function makeBash(sessionId: string, tabId: number, proMode: boolean, cfg: Awaited<ReturnType<typeof loadConfig>>, source: { fs: Bash['fs'] } | { files: Record<string, string | Uint8Array> }): Bash {
+  const getAuthorization = () => instances.get(sessionId)?.authorization
   const currentMode = proMode ? 'pro' : 'chat'
   const { maxFile } = fsLimits(proMode, cfg?.largeFileUploads !== false)
   const network: NetworkConfig | undefined = cfg?.labFetch
@@ -170,7 +197,7 @@ function makeBash(sessionId: string, tabId: number, proMode: boolean, cfg: Await
   const onMemoryUpdate = (path: string, content: string) => {
     if (path.startsWith('/memory/')) void bash.fs.writeFile(path, content)
   }
-  const commands = createPageCommands(tabId, currentMode, onMemoryUpdate, sessionId).map(command => {
+  const commands = createPageCommands(tabId, currentMode, onMemoryUpdate, sessionId, getAuthorization).map(command => {
     if (command.name !== 'screenshot') return command
     return {
       ...command,
@@ -179,7 +206,7 @@ function makeBash(sessionId: string, tabId: number, proMode: boolean, cfg: Await
         const token = `shell-screenshot:${crypto.randomUUID()}`
         screenshotContexts.set(token, { sessionId, fs: args[1].fs, proMode })
         try {
-          const scoped = createPageCommands(tabId, currentMode, onMemoryUpdate, token).find(c => c.name === 'screenshot')!
+          const scoped = createPageCommands(tabId, currentMode, onMemoryUpdate, token, getAuthorization).find(c => c.name === 'screenshot')!
           return await scoped.execute(...args)
         } finally {
           screenshotContexts.delete(token)
@@ -189,7 +216,7 @@ function makeBash(sessionId: string, tabId: number, proMode: boolean, cfg: Await
   })
   const bash = new Bash({
     ...source,
-    customCommands: [...commands, createChromeCommand(tabId, sessionId), createMcpCommand(tabId), ...(proMode ? [createDebugCommand()] : [])],
+    customCommands: [...commands, createChromeCommand(tabId, sessionId, getAuthorization), createMcpCommand(tabId, getAuthorization), ...(proMode ? [createDebugCommand()] : [])],
     cwd: '/',
     executionLimits: {
       maxCommandCount: proMode ? 5000 : 500,
@@ -198,6 +225,8 @@ function makeBash(sessionId: string, tabId: number, proMode: boolean, cfg: Await
     },
     network,
   })
+  // Reason: Bash must initialize its command paths before tracking the live filesystem.
+  trackFilesystem(bash.fs)
   return bash
 }
 
@@ -219,6 +248,20 @@ async function createInstanceUnlocked(sessionId: string, tabId: number, proMode:
 
 export async function createInstance(sessionId: string, tabId: number, proMode = false): Promise<ShellInstance> {
   return withSessionLock(sessionId, () => createInstanceUnlocked(sessionId, tabId, proMode))
+}
+
+export async function captureShellReadView(sessionId: string, tabId: number): Promise<{ fs: IFileSystem; isCurrent(): boolean }> {
+  return withSessionLock(sessionId, async () => {
+    const instance = await createInstanceUnlocked(sessionId, tabId, await coldSessionIsPro(sessionId))
+    const fs = instance.bash.fs
+    const state = trackedFilesystems.get(fs)!
+    if (state.pending) throw new Error('审批文件系统正在变更')
+    const revision = state.revision
+    return {
+      fs,
+      isCurrent: () => instances.get(sessionId)?.bash.fs === fs && state.pending === 0 && state.revision === revision,
+    }
+  })
 }
 
 // Reason: used by vfs:write for tool result archiving and canvas snapshots.
@@ -304,8 +347,15 @@ export async function execBash(
   tabId: number,
   command: string,
   proMode = false,
+  authorization?: ExecutionApproval,
 ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
-  return withSessionLock(sessionId, () => execBashInner(sessionId, tabId, command, proMode))
+  return withSessionLock(sessionId, async () => {
+    if (authorization && !authorization.isActive()) throw new Error('调用授权已失效')
+    const instance = await createInstanceUnlocked(sessionId, tabId, proMode)
+    instance.authorization = authorization
+    try { return await execBashInner(sessionId, tabId, command, proMode) }
+    finally { instance.authorization = undefined }
+  })
     .catch(e => ({ stdout: '', stderr: String(e) + '\n', exitCode: 1 }))
 }
 
@@ -340,7 +390,8 @@ async function execBashInner(
   try {
     const result = await mutateLiveFs(sessionId, instance.bash.fs, instance.proMode, async () => {
       try {
-        return await instance.bash.exec(command, { signal: controller.signal })
+        const signal = instance.authorization?.signal
+        return await instance.bash.exec(command, { signal: signal ? AbortSignal.any([signal, controller.signal]) : controller.signal })
       } finally {
         clearTimeout(timer)
       }

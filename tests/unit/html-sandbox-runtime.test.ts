@@ -6,6 +6,9 @@ const template = readFileSync(new URL('../../src/viz/sandbox.src.html', import.m
 const opened: JSDOM[] = []
 
 interface SandboxMessage {
+  requestId?: string
+  method?: string
+  args?: unknown
   type: string
   id?: string
   message?: string
@@ -25,14 +28,16 @@ function sandbox(network = false, loadResource?: (request: Request) => Response 
     virtualConsole: new VirtualConsole(),
     beforeParse(window) {
       Object.defineProperty(window, 'parent', { value: parent })
+      Object.defineProperty(window, 'structuredClone', { value: structuredClone })
     },
   })
   opened.push(dom)
-  const render = (html: string, id = 'render-1') => {
+  const render = (html: string, id = 'render-1', sideki?: unknown) => {
     dom.window.dispatchEvent(new dom.window.MessageEvent('message', {
       source: parent,
       data: {
         type: 'viz:render', id, html,
+        sideki,
         theme: { mode: 'light', tokens: { '--seed-fg': '#112233', '--seed-primary': '#d0261a' } },
       },
     }))
@@ -48,6 +53,37 @@ afterEach(() => {
 })
 
 describe('shared HTML sandbox runtime', () => {
+  it('restores widgetState before scripts execute and resolves state requests using host acknowledgements', async () => {
+    const host = sandbox()
+    host.render(`<output id="state"></output><script>
+      document.getElementById('state').textContent = String(sideki.widgetState.modelContent.budget);
+      sideki.setWidgetState({modelContent:{budget:5000}}).then(result => {
+        document.getElementById('state').textContent = sideki.widgetState.modelContent.budget + ':' + result.revision;
+      });
+    </script>`, 'render-1', { enabled: true, revision: 2, widgetState: { modelContent: { budget: 3000 }, privateContent: null } })
+    await host.rendered()
+    expect(host.document.getElementById('state')!.textContent).toBe('3000')
+    const request = host.messages.find(m => m.type === 'viz:request')!
+    expect(request.method).toBe('setWidgetState')
+    host.window.dispatchEvent(new host.window.MessageEvent('message', { source: host.parent, data: {
+      type: 'viz:response', id: 'render-1', requestId: request.requestId,
+      result: { revision: 3, widgetState: { modelContent: { budget: 5000 }, privateContent: null } },
+    } }))
+    await vi.waitFor(() => expect(host.document.getElementById('state')!.textContent).toBe('5000:3'))
+    // Reason: delayed acknowledgements must not overwrite a newer update from another window.
+    host.window.dispatchEvent(new host.window.MessageEvent('message', { source: host.parent, data: { type: 'viz:state', id: 'render-1', revision: 1, state: { modelContent: { budget: 1000 }, privateContent: null } } }))
+    expect((host.window as unknown as { sideki: { widgetState: unknown } }).sideki.widgetState).toMatchObject({ modelContent: { budget: 5000 } })
+  })
+
+  it('explicitly rejects callback calls in hidden probe mode', async () => {
+    const host = sandbox()
+    host.render(`<output id="result"></output><script>
+      sideki.setWidgetState({modelContent:1}).catch(error => document.getElementById('result').textContent = error.message);
+    </script>`)
+    await host.rendered()
+    expect(host.document.getElementById('result')!.textContent).toContain('不支持画布回调')
+    expect(host.messages.some(m => m.type === 'viz:request')).toBe(false)
+  })
   it('handshakes and executes fragment scripts with local DOM interactions', async () => {
     const host = sandbox()
     expect(host.messages).toContainEqual({ type: 'viz:ready' })

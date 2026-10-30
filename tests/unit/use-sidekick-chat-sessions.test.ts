@@ -135,6 +135,26 @@ afterEach(async () => {
 })
 
 describe('panel session index and lazy body loading', () => {
+  it('persists current permission without changing other chats and stamps new-chat defaults', async () => {
+    vi.mocked(loadConfig).mockResolvedValue({ labAutoCompress: false, contextWindow: 100_000, defaultPermissionMode: 'auto' } as ApiConfig)
+    await render()
+    expect(current.permissionMode).toBe('ask')
+    await act(async () => { await current.setPermissionMode('allow') })
+    expect(current.permissionMode).toBe('allow')
+    expect(stored.get('a')?.permissionMode).toBe('allow')
+    expect(stored.get('b')?.permissionMode).toBeUndefined()
+    await act(async () => { current.handleNewSession() })
+    expect(current.permissionMode).toBe('auto')
+    expect(stored.get(current.activeId)?.permissionMode).toBe('auto')
+  })
+
+  it('restores current permission when saving a mode fails', async () => {
+    await render()
+    vi.mocked(saveSession).mockRejectedValueOnce(new Error('storage failed'))
+    await act(async () => { await expect(current.setPermissionMode('allow')).rejects.toThrow('storage failed') })
+    expect(current.permissionMode).toBe('ask')
+  })
+
   it('loads only the index and selected body, keeping other entries lightweight', async () => {
     const body = deferred<ChatSession | null>()
     vi.mocked(loadSession).mockReturnValueOnce(body.promise)

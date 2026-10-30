@@ -296,6 +296,10 @@ html.pro-mode {
   .animate-pulse-glow {
     animation: pulse-glow 1.5s ease-in-out infinite;
   }
+  /* Reason: approval stays in place; opacity alone signals ongoing review without moving a small status glyph. */
+  .animate-approval-breathe {
+    animation: pulse-glow 1.4s ease-in-out infinite;
+  }
 
   @keyframes shimmer-sweep {
     from { background-position: 150% center; }
@@ -314,6 +318,16 @@ html.pro-mode {
     -webkit-text-fill-color: transparent;
     color: transparent;
     animation: shimmer-sweep 2.2s linear infinite;
+  }
+
+  /* Reason: give animated glyphs a paint gutter without moving the text. The
+     shimmer belongs on the text leaf, not outside clipped/transformed layers. */
+  .tool-title-viewport {
+    min-width: 0;
+    margin: -4px;
+    padding: 4px;
+    overflow-x: clip;
+    overflow-y: visible;
   }
 
   /* Top/bottom edge highlight — mimics light refraction on glass edge.
@@ -446,6 +460,8 @@ html.pro-mode {
   }
   /* Reason: 3px is the ceiling for 11px text — more turns the label into a smudge. */
   .swap-in {
+    /* Reason: transforms do not apply to non-replaced inline spans. */
+    display: inline-block;
     animation: swap-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
   }
   /* Reason: the count is a state change, not ambient text churn — a short entrance
@@ -453,6 +469,7 @@ html.pro-mode {
      At the label's 0.6s/0.12s the digits were already settled while the line still
      sat at half opacity, so the roll read as "the number just faded in". */
   .swap-in-fast {
+    display: inline-block;
     animation: swap-in 0.24s ease-out both;
   }
   /* Reason: must stay in sync with SWAP_OUT_MS in MessageList.tsx — the layer is
@@ -624,6 +641,7 @@ html.pro-mode {
 /* Reason: Streamdown's animation stylesheet is unlayered, so this override must
    also live outside Tailwind layers to respect the system motion preference. */
 @media (prefers-reduced-motion: reduce) {
+  .animate-approval-breathe,
   .markdown-content [data-sd-animate],
   .markdown-content [data-sd-animate-marker]::marker {
     animation: none;

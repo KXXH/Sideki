@@ -1,6 +1,7 @@
 import { hidePageLockIndicator, setPageLockIndicatorEnabled, showPageLockIndicator, syncPageLockIndicator } from './page-lock-indicator'
 import { resetMouseState, resetSessionMouseState, resetTabMouseState } from './input-state'
 import { hideAiPointer } from './ai-pointer'
+import { cleanToolDescription, type ToolActivity } from '../shared/tool-description'
 
 // Reason: turn-scoped tab ownership. A turn's operating tab is the top of its
 // OWN stack, never "the active tab of some window" — that is a shared mutable
@@ -25,6 +26,22 @@ interface TurnStack {
 }
 
 const stacks = new Map<string, TurnStack>()
+const activities = new Map<string, ToolActivity[]>()
+
+// Reason: activity is read-only decoration. It may neither acquire a tab nor
+// override the turn's stack with the window's active tab.
+export function updateTurnActivity(sessionId: string, value: unknown): void {
+  const top = operatingTabOf(sessionId)
+  if (top == null || !Array.isArray(value)) return
+  const calls: ToolActivity[] = value.slice(-20).flatMap(call => {
+    if (!call || typeof call !== 'object' || typeof call.id !== 'string') return []
+    const description = cleanToolDescription(call.description)
+    if (!description || (call.phase !== 'preparing' && call.phase !== 'executing')) return []
+    return [{ id: call.id.slice(0, 200), description, phase: call.phase }]
+  })
+  activities.set(sessionId, calls)
+  void showPageLockIndicator(top, calls)
+}
 
 // Reason: the panel's page strip must show the page the CONTEXT points at, not
 // whichever tab the user just switched to — mid-turn those diverge. Broadcast
@@ -38,6 +55,7 @@ function notifyTop(sessionId: string): void {
   lastNotifiedTop.set(sessionId, top)
   if (top == null) lastNotifiedTop.delete(sessionId)
   syncPageLockIndicator(prev, top)
+  if (top != null && activities.has(sessionId)) void showPageLockIndicator(top, activities.get(sessionId))
   // Reason: coordinates from the tab we just left describe a different viewport,
   // and its pointer now depicts nothing.
   if (prev != null && prev !== top) {
@@ -71,6 +89,7 @@ function prune(now: number): void {
     if (now - entry.touchedAt <= STALE_MS) continue
     const top = entry.stack[entry.stack.length - 1]
     stacks.delete(sessionId)
+    activities.delete(sessionId)
     // Reason: eviction IS a release whose message never arrived, so it must do
     // the same cleanup. Skipping it orphaned the injected island and the
     // pointer: once the stack entry is gone no later call can reference that
@@ -176,6 +195,7 @@ export async function resolveOperatingTab(
 export function releaseTurn(sessionId: string): void {
   const top = operatingTabOf(sessionId)
   stacks.delete(sessionId)
+  activities.delete(sessionId)
   resetSessionMouseState(sessionId)
   if (top != null) hideAiPointer(top)
   notifyTop(sessionId)
@@ -197,7 +217,7 @@ export function touchTurn(sessionId: string): void {
   // service worker, which cannot be trusted to survive suspension. A released or
   // pruned session has no entry, so a dead turn never renews.
   const top = entry.stack[entry.stack.length - 1]
-  if (top != null) showPageLockIndicator(top)
+  if (top != null) showPageLockIndicator(top, activities.get(sessionId))
 }
 
 // Reason: the only signal that says "this new tab came from THAT tab" —
@@ -278,10 +298,10 @@ export function lockedTabsSnapshot(now = Date.now()): { sessionId: string; tabs:
 
 export function setPageLockIndicatorPreference(enabled: boolean): void {
   setPageLockIndicatorEnabled(enabled)
-  for (const entry of stacks.values()) {
+  for (const [sessionId, entry] of stacks) {
     const top = entry.stack[entry.stack.length - 1]
     if (top == null) continue
-    if (enabled) showPageLockIndicator(top)
+    if (enabled) showPageLockIndicator(top, activities.get(sessionId))
     else hidePageLockIndicator(top)
   }
 }
@@ -298,13 +318,14 @@ export function registerTabLockListeners(): void {
     // injected island; if this tab is still the stack top, restore it.
     if (!changeInfo.url && changeInfo.status !== 'complete') return
     const owner = sessionOperatingOn(tabId)
-    if (owner) showPageLockIndicator(tabId)
+    if (owner) showPageLockIndicator(tabId, activities.get(owner))
   })
 }
 
 // Reason: tests drive the registry directly and must not inherit state.
 export function __resetTabLocks(): void {
   stacks.clear()
+  activities.clear()
   lastNotifiedTop.clear()
 }
 

@@ -1,4 +1,5 @@
 const TOOL_PREFIX = 'tool:'
+import type { ApprovalReference } from '../approval-types'
 
 export interface ToolResult {
   success: boolean
@@ -18,6 +19,7 @@ export function getActiveSessionId(): string { return _activeSessionId }
 // concurrently in the offscreen host, so tab/session identity must travel
 // with each tool call. Module-level state remains the panel-mode fallback.
 export interface ToolCallCtx {
+  getApproval?: (toolCallId: string) => ApprovalReference | undefined
   getSessionId?: () => string
   getTabId?: () => number | null
   isPinned?: () => boolean
@@ -102,13 +104,14 @@ export async function sendToolMessage<T extends ToolResult = ToolResult>(
   params: Record<string, unknown>,
   abortSignal?: AbortSignal,
   ctx?: ToolCallCtx,
+  toolCallId?: string,
 ): Promise<T> {
   const tabId = await resolveTabId(ctx)
 
   const enriched = { ...params }
   // Reason: bash needs the per-session FS; screenshot needs it for the
   // labImageFs VFS mirror.
-  if ((toolType === 'bash' || toolType === 'screenshot') && !enriched.sessionId) {
+  if (toolType === 'bash' || toolType === 'screenshot') {
     const sid = ctx?.getSessionId?.() || _activeSessionId
     if (sid) enriched.sessionId = sid
   }
@@ -117,6 +120,7 @@ export async function sendToolMessage<T extends ToolResult = ToolResult>(
     type: `${TOOL_PREFIX}${toolType}`,
     tabId,
     params: enriched,
+    approval: toolCallId ? ctx?.getApproval?.(toolCallId) : undefined,
   })
 
   if (!abortSignal) {

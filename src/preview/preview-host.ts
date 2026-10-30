@@ -1,4 +1,6 @@
 import { validateHtmlArtifact } from '../shared/html-artifact'
+import { createCanvasHost, type CanvasHost } from '../shared/canvas-host'
+import type { CanvasBinding } from '../shared/canvas-state'
 
 export type PreviewSender = (message: Record<string, unknown>) => Promise<unknown>
 export interface PreviewTheme {
@@ -71,6 +73,7 @@ export function previewFileBlob(path: string, content: string): Blob {
 }
 
 export interface HtmlPreviewFrameOptions {
+  canvas?: CanvasBinding
   container: HTMLElement
   html: string
   network: boolean
@@ -90,6 +93,7 @@ export function mountHtmlPreview(options: HtmlPreviewFrameOptions): { dispose: (
   let ready = false
   let disposed = false
   let failed = false
+  let canvasHost: CanvasHost | null = null
   // Reason: a tab owns a real viewport and scrolls inside the frame; chat-only auto-height would distort vh layouts.
   frame.style.height = '100%'
   const onMessage = (event: MessageEvent) => {
@@ -99,10 +103,18 @@ export function mountHtmlPreview(options: HtmlPreviewFrameOptions): { dispose: (
     if (data.type === 'viz:ready') {
       if (ready) return
       ready = true
-      frame.contentWindow?.postMessage({ type: 'viz:render', id, html: options.html, theme: options.getTheme() }, '*')
+      const render = async () => {
+        if (options.canvas) canvasHost = await createCanvasHost(options.canvas, message => {
+          if (!disposed) frame.contentWindow?.postMessage({ ...message, id }, '*')
+        })
+        if (disposed) { canvasHost?.dispose(); return }
+        frame.contentWindow?.postMessage({ type: 'viz:render', id, html: options.html, theme: options.getTheme(), sideki: canvasHost?.initial }, '*')
+      }
+      void render().catch(error => { if (!disposed) options.onError(error instanceof Error ? error.message : String(error)) })
       return
     }
     if (data.id !== id) return
+    if (canvasHost?.handle(data)) return
     if (data.type === 'viz:error') {
       clearTimeout(timer)
       failed = true
@@ -126,6 +138,7 @@ export function mountHtmlPreview(options: HtmlPreviewFrameOptions): { dispose: (
     },
     dispose: () => {
       disposed = true
+      canvasHost?.dispose()
       clearTimeout(timer)
       window.removeEventListener('message', onMessage)
       frame.remove()

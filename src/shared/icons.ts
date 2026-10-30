@@ -34,6 +34,18 @@ export { default as iconThinking } from '@iconify-icons/svg-spinners/3-dots-fade
 export { default as iconBrain } from '@iconify-icons/mdi/brain'
 export { default as iconCircleDot } from '@iconify-icons/mdi/record-circle-outline'
 export { default as iconShieldAlert } from '@iconify-icons/mdi/shield-alert-outline'
+export { default as iconPermissionReview } from '@iconify-icons/mdi/shield'
+export { default as iconPermissionAsk } from '@iconify-icons/lucide/shield-question'
+export { default as iconPermissionAuto } from '@iconify-icons/lucide/shield-check'
+export { default as iconPermissionAllow } from '@iconify-icons/lucide/shield-alert'
+// Reason: match the filled MDI status silhouettes; an even-odd cutout keeps the X transparent on every surface.
+export const iconPermissionDenied = {
+  width: 24,
+  height: 24,
+  body: '<path fill="currentColor" fill-rule="evenodd" d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5L12 1Zm-3.2 6.4L12 10.6l3.2-3.2 1.4 1.4-3.2 3.2 3.2 3.2-1.4 1.4-3.2-3.2-3.2 3.2-1.4-1.4 3.2-3.2-3.2-3.2 1.4-1.4Z"/>',
+}
+export { default as iconPermissionError } from '@iconify-icons/mdi/shield-alert'
+export { default as iconToolError } from '@iconify-icons/mdi/alert-circle'
 export { default as iconCursorClick } from '@iconify-icons/mdi/cursor-default-click-outline'
 export { default as iconCodeBraces } from '@iconify-icons/mdi/code-braces'
 export { default as iconWeb } from '@iconify-icons/mdi/web'

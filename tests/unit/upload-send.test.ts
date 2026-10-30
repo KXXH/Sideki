@@ -21,7 +21,7 @@ function runtime(sessionId = 's1') {
     loadConfig: vi.fn().mockResolvedValue(config), onConfigChanged: vi.fn().mockReturnValue(() => {}),
     loadSessions: vi.fn().mockResolvedValue([]), loadSession: vi.fn().mockResolvedValue(null),
     saveSession: vi.fn().mockResolvedValue(undefined), updateSessionMeta: vi.fn().mockResolvedValue(undefined), deleteSession: vi.fn().mockResolvedValue(undefined),
-    removeHistory: vi.fn().mockResolvedValue(undefined), sendMessage: vi.fn().mockResolvedValue(undefined),
+    removeHistory: vi.fn().mockResolvedValue(undefined), sendMessage: vi.fn(async (msg: { type?: string }) => msg.type === 'canvas:request' ? { success: true, result: [] } : undefined),
   }
   const rt = new SessionRuntime({
     session: { id: sessionId, title: 'test', messages: [], createdAt: 1, updatedAt: 1 },

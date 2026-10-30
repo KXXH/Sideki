@@ -31,7 +31,7 @@ function makeEnv(): KernelEnv {
     updateSessionMeta: vi.fn().mockResolvedValue(undefined),
     deleteSession: vi.fn().mockResolvedValue(undefined),
     removeHistory: vi.fn().mockResolvedValue(undefined),
-    sendMessage: vi.fn().mockResolvedValue(undefined),
+    sendMessage: vi.fn(async (msg: { type?: string }) => msg.type === 'canvas:request' ? { success: true, result: [] } : undefined),
   }
 }
 

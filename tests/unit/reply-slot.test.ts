@@ -254,7 +254,7 @@ describe.each([true, false])('reply slot lifecycle with collapseSteps=%s', colla
     await renderMessages([firstUser, answer], 'idle')
     const oldBubble = container.children[1]
     const oldMarkdown = oldBubble.querySelector('[data-testid="markdown"]')
-    const oldToolButton = [...oldBubble.querySelectorAll('button')].find(button => button.textContent?.includes('bash'))
+    const oldToolButton = oldBubble.querySelector('button[title^="bash ·"]')
     expect(oldToolButton).toBeDefined()
     if (collapseSteps) {
       expectSameStatus(firstStatus)

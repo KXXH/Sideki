@@ -5,10 +5,13 @@ import { Icon } from '@iconify/react'
 import { motion, useAnimationFrame, animate } from 'motion/react'
 import { motionValue } from 'motion'
 import type { UIMessage } from 'ai'
+import type { ToolCallDisplay } from '../../shared/types'
+import type { ApprovalState } from '../../shared/approval-service'
 import {
   iconCopy, iconRefresh, iconImage, iconCheck, iconLinkVariant,
-  iconLoading, iconCheckCircle, iconAlertCircle, iconBrain, iconCircleDot, iconThinking, iconQuote, iconCancel, iconChevronRight,
+  iconLoading, iconCheckCircle, iconBrain, iconCircleDot, iconThinking, iconQuote, iconCancel, iconChevronRight,
   iconAutoFix, iconCrosshairs, iconFileDocument,
+  iconPermissionReview, iconPermissionDenied, iconPermissionError, iconToolError,
 } from '../../shared/icons'
 import type { EmptySuggestion, EmptyStateDeck } from '../empty-state-suggestions'
 import AnimatedIcon from './AnimatedIcon'
@@ -19,6 +22,7 @@ import { loadConfig } from '../../shared/storage'
 import { getMeta, isSkillPart, isElementPart, isFilePart, splitLegacyZws } from '../../shared/message-protocol'
 import { derivePhase, type StatusPhase, type TrailingKind } from '../status-phase'
 import { usePhaseLabel } from '../hooks/usePhaseLabel'
+import { supportsToolDescription, toolDescription } from '../../shared/tool-description'
 
 function ClaudeIcon({ className }: { className?: string }) {
   return (
@@ -37,6 +41,21 @@ interface ToolCallInfo {
   input?: unknown
   output?: unknown
   errorText?: string
+  rawInput?: unknown
+  approval?: { approved?: boolean; reason?: string }
+  reviewing?: boolean
+}
+
+function toolWasDenied(call: ToolCallInfo): boolean {
+  return call.state === 'output-denied' || (call.state === 'approval-responded' && call.approval?.approved === false)
+}
+
+function toolApprovalFailed(call: ToolCallInfo): boolean {
+  return toolWasDenied(call) && call.approval?.reason?.startsWith('审批未完成：') === true
+}
+
+function toolIsCalling(call: ToolCallInfo): boolean {
+  return !toolWasDenied(call) && ['input-streaming', 'input-available', 'call', 'approval-requested', 'approval-responded'].includes(call.state)
 }
 
 function extractToolInfo(part: UIMessage['parts'][number]): ToolCallInfo | null {
@@ -46,8 +65,10 @@ function extractToolInfo(part: UIMessage['parts'][number]): ToolCallInfo | null 
       toolCallId: part.toolCallId,
       state: part.state,
       input: 'input' in part ? part.input : undefined,
+      rawInput: 'rawInput' in part ? part.rawInput : undefined,
       output: part.state === 'output-available' ? part.output : undefined,
       errorText: part.state === 'output-error' ? part.errorText : undefined,
+      approval: 'approval' in part ? part.approval : undefined,
     }
   }
   if (part.type.startsWith('tool-')) {
@@ -57,8 +78,10 @@ function extractToolInfo(part: UIMessage['parts'][number]): ToolCallInfo | null 
       toolCallId: p.toolCallId as string,
       state: p.state as string,
       input: p.input,
+      rawInput: p.rawInput,
       output: p.state === 'output-available' ? p.output : undefined,
       errorText: p.state === 'output-error' ? (p.errorText as string) : undefined,
+      approval: p.approval as ToolCallInfo['approval'],
     }
   }
   return null
@@ -70,13 +93,13 @@ function isToolPart(part: UIMessage['parts'][number]): boolean {
 
 // Reason: a finished visualize call renders as an inline frame at its position;
 // while it is still running it stays an ordinary tool row.
-function vizSnapshot(tool: ToolCallInfo): { path: string; title: string; network: boolean } | null {
+function vizSnapshot(tool: ToolCallInfo): { path: string; title: string; network: boolean; canvasId: string } | null {
   if (tool.toolName !== 'visualize' || tool.state !== 'output-available') return null
   const output = tool.output
   if (!output || typeof output !== 'object') return null
-  const { path, title, network } = output as Record<string, unknown>
+  const { path, title, network, canvasId } = output as Record<string, unknown>
   if (typeof path !== 'string' || !path) return null
-  return { path, title: typeof title === 'string' && title ? title : basenameOf(path), network: network === true }
+  return { path, title: typeof title === 'string' && title ? title : basenameOf(path), network: network === true, canvasId: typeof canvasId === 'string' && canvasId ? canvasId : `path:${path}` }
 }
 
 function basenameOf(path: string): string {
@@ -260,12 +283,14 @@ interface MessageBubbleProps {
   relayedToCC?: boolean
   sessionId?: string
   pageRef?: { url: string; title: string } | null
+  toolCallDisplay?: ToolCallDisplay
+  approvalState?: Pick<ApprovalState, 'status' | 'toolCallId'>
 }
 
 // Reason: memoized — the mirror patch stream re-renders ChatView every 80ms
 // during streaming, but untouched messages keep their references (kernel
 // copy-on-write + applyPatch index merge), so shallow compare skips them all.
-export const MessageBubble = memo(function MessageBubble({ message, isStreaming, isLast, pendingPhase = 'idle', onRegenerate, fromBridge, relayedToCC, sessionId, pageRef }: MessageBubbleProps) {
+export const MessageBubble = memo(function MessageBubble({ message, isStreaming, isLast, pendingPhase = 'idle', onRegenerate, fromBridge, relayedToCC, sessionId, pageRef, toolCallDisplay = 'description', approvalState }: MessageBubbleProps) {
   const collapseSteps = useCollapseSteps()
   const captureRef = useRef<HTMLDivElement>(null)
   const isActiveMsg = isLast && (isStreaming || pendingPhase !== 'idle')
@@ -275,6 +300,8 @@ export const MessageBubble = memo(function MessageBubble({ message, isStreaming,
 
   if (message?.role === 'user') {
     const timerMeta = getMeta(message)
+    const canvasTitles = message.parts.filter(p => p.type === 'data-canvas-context')
+      .flatMap(p => (p as unknown as { data: Array<{ title: string }> }).data).map(s => s.title)
     if (timerMeta?.source === 'timer' && timerMeta.timer) return <TimerWakeEvent wake={timerMeta.timer} />
     const isV2 = getMeta(message)?.v === 2
     const images = message.parts.filter(p => p.type === 'file' && p.mediaType?.startsWith('image/'))
@@ -326,6 +353,11 @@ export const MessageBubble = memo(function MessageBubble({ message, isStreaming,
           ))}
           {/* Reason: encoded URL queries can have no natural breakpoints; wrap within the bubble without changing copied text. */}
           {texts.map((t, i) => <span key={i} className="whitespace-pre-wrap [overflow-wrap:anywhere]">{t}</span>)}
+          {(canvasTitles.length > 0 || timerMeta?.canvasSource) && (
+            <span className="mt-1.5 block text-[11px] text-text-secondary">
+              {timerMeta?.canvasSource ? `来自画布：${timerMeta.canvasSource.title}` : `画布状态：${canvasTitles.join('、')}`}
+            </span>
+          )}
           {/* Reason: element attachments render as chips at the end of the bubble */}
           {elementParts.length > 0 && (
             <span className={`flex flex-wrap gap-1 ${texts.length > 0 || skillParts.length > 0 ? 'mt-1.5' : ''}`}>
@@ -390,10 +422,11 @@ export const MessageBubble = memo(function MessageBubble({ message, isStreaming,
     if (part.type === 'text' && !part.text.trim()) continue
     const toolInfo = extractToolInfo(part)
     if (toolInfo) {
+      toolInfo.reviewing = isActiveMsg && approvalState?.status === 'reviewing' && approvalState.toolCallId === toolInfo.toolCallId
       const viz = vizSnapshot(toolInfo)
       if (viz) {
         flushToolBatch()
-        groups.push({ kind: 'viz', path: viz.path, title: viz.title, network: viz.network, toolCallId: toolInfo.toolCallId })
+        groups.push({ kind: 'viz', path: viz.path, title: viz.title, network: viz.network, canvasId: viz.canvasId, toolCallId: toolInfo.toolCallId })
       } else {
         toolBatch.push(toolInfo)
       }
@@ -410,13 +443,12 @@ export const MessageBubble = memo(function MessageBubble({ message, isStreaming,
   if (collapseSteps) {
     let stepRun: GroupItem[] = []
     const flushSteps = (trailing: boolean) => {
-      // Reason: an empty reply occupies the same first steps group as its eventual reasoning or tools.
+      // Reason: the placeholder and tools keep one steps parent through text
+      // start and turn completion, preserving in-flight title transitions.
       if (trailing && isActiveMsg && (stepRun.length > 0 || groups.length === 0)) {
         displayGroups.push({ kind: 'steps', items: [...stepRun] })
-      } else if (stepRun.length >= 2) {
+      } else if (stepRun.some(g => g.kind === 'tools' || (g.kind === 'part' && g.part.type === 'reasoning'))) {
         displayGroups.push({ kind: 'steps', items: [...stepRun] })
-      } else if (stepRun.length === 1) {
-        displayGroups.push(stepRun[0])
       }
       stepRun = []
     }
@@ -449,15 +481,16 @@ export const MessageBubble = memo(function MessageBubble({ message, isStreaming,
       <div ref={captureRef}>
         {renderGroups.map((g, gi) => {
           if (g.kind === 'steps') {
-            return <StepsCollapse key={`sc-${gi}`} items={g.items} isActive={gi === lastStepsIdx} phase={phase} />
+            return <StepsCollapse key={`sc-${gi}`} items={g.items} isActive={gi === lastStepsIdx} phase={phase} display={toolCallDisplay} />
           }
           if (g.kind === 'tools') {
-            return <ToolCallGroup key={`tg-${gi}`} calls={g.calls} isActive={isActiveMsg} />
+            return <ToolCallGroup key={`tg-${gi}`} calls={g.calls} isActive={isActiveMsg} display={toolCallDisplay} />
           }
           if (g.kind === 'viz') {
             return (
               <VizFrame
                 key={`viz-${g.toolCallId}`}
+                canvasId={g.canvasId}
                 sessionId={sessionId ?? ''}
                 path={g.path}
                 title={g.title}
@@ -532,7 +565,7 @@ function summarizeInput(toolName: string, input: unknown): string {
       : typeof obj.path === 'string' ? obj.path : ''
     return text.length > 40 ? text.slice(0, 40) + '…' : text
   }
-  const first = Object.entries(input as Record<string, unknown>).find(([, v]) => typeof v === 'string')
+  const first = Object.entries(input as Record<string, unknown>).find(([key, v]) => key !== 'description' && typeof v === 'string')
   if (!first) return ''
   const val = first[1] as string
   return val.length > 40 ? val.slice(0, 40) + '…' : val
@@ -559,6 +592,7 @@ function formatInput(toolName: string, input: unknown): string {
   if ('command' in obj && typeof obj.command === 'string') return obj.command
   const lines: string[] = []
   for (const [k, v] of Object.entries(obj)) {
+    if (k === 'description' && supportsToolDescription(toolName)) continue
     if (v === undefined || v === null) continue
     const val = typeof v === 'string' ? v : JSON.stringify(v)
     lines.push(`${k}: ${val}`)
@@ -566,36 +600,52 @@ function formatInput(toolName: string, input: unknown): string {
   return lines.join('\n')
 }
 
-function ToolCallItem({ call, isActive }: { call: ToolCallInfo; isActive?: boolean }) {
+function ToolCallItem({ call, isActive, display }: { call: ToolCallInfo; isActive?: boolean; display: ToolCallDisplay }) {
   const [expanded, setExpanded] = useState(false)
-  const isCalling = call.state === 'input-streaming' || call.state === 'input-available' || call.state === 'call'
+  const isCalling = toolIsCalling(call)
+  const isDenied = toolWasDenied(call)
   const isInterrupted = isCalling && !isActive
   const isRunning = isCalling && !isInterrupted
   const isDone = call.state === 'output-available' || call.state === 'result'
-  const isError = call.state === 'output-error'
-  const detail = isInterrupted ? 'Interrupted' : isError ? (call.errorText || '') : (isDone ? (typeof call.output === 'string' ? call.output : JSON.stringify(call.output ?? '')) : '')
+  const isError = call.state === 'output-error' || isDenied
+  const isReviewing = isRunning && (call.reviewing || call.state === 'approval-requested')
+  const detail = isDenied ? (call.approval?.reason || '此操作未获批准') : isInterrupted ? 'Interrupted' : isError ? (call.errorText || '') : (isDone ? (typeof call.output === 'string' ? call.output : JSON.stringify(call.output ?? '')) : '')
+  const approvalFailed = toolApprovalFailed(call)
   const hasError = isError || isInterrupted || detail.startsWith('Error:')
-  const statusIcon = isRunning ? iconLoading : isInterrupted ? iconCancel : hasError ? iconAlertCircle : iconCheckCircle
-  const statusCls = isRunning ? 'text-text-muted animate-spin' : isInterrupted ? 'text-warning/60' : hasError ? 'text-error/50' : 'text-text-muted'
+  const statusIcon = isReviewing ? iconPermissionReview : isRunning ? iconLoading : isInterrupted ? iconCancel : isDenied ? (approvalFailed ? iconPermissionError : iconPermissionDenied) : hasError ? iconToolError : iconCheckCircle
+  const statusCls = isReviewing ? 'text-text-muted animate-approval-breathe' : isRunning ? 'text-text-muted animate-spin' : isInterrupted || approvalFailed ? 'text-warning' : hasError ? 'text-error' : 'text-text-muted'
+  const statusText = isReviewing ? '确认操作…' : isRunning && call.state !== 'input-streaming' ? '执行中…' : isDenied ? (approvalFailed ? '确认异常' : '已拒绝') : hasError && !isInterrupted ? '调用失败' : ''
   const imageUrl = !hasError && call.toolName === 'screenshot' ? extractDataUrl(call.output) : null
   const inputText = formatInput(call.toolName, call.input)
+  const describedTool = supportsToolDescription(call.toolName)
+  const description = display !== 'raw' && describedTool ? toolDescription(call) : null
+  const label = description ?? call.toolName
+  const inputSummary = summarizeInput(call.toolName, call.input)
 
   return (
     <div className="py-0.5 animate-fade-in">
       <button
         onClick={() => setExpanded(v => !v)}
-        className={`flex max-w-full items-center gap-1 text-[11px] transition-colors ${hasError ? 'text-error/60 hover:text-error' : 'text-text-muted hover:text-text-secondary'}`}
+        aria-expanded={expanded}
+        title={`${call.toolName} · ${label}`}
+        className={`flex max-w-full items-center gap-1 text-[11px] transition-colors ${hasError && !isDenied ? 'text-error/60 hover:text-error' : 'text-text-muted hover:text-text-secondary'}`}
       >
-        <Icon icon={statusIcon} className={`text-xs ${statusCls}`} />
-        <span className={`flex min-w-0 items-center gap-1 ${isRunning ? 'shimmer-sweep' : ''}`}>
-          <span className="shrink-0 whitespace-nowrap font-mono">{call.toolName}</span>
-          {!expanded && summarizeInput(call.toolName, call.input) && (
-            <span className="truncate text-text-muted">{summarizeInput(call.toolName, call.input)}</span>
+        <Icon icon={statusIcon} aria-hidden="true" className={`shrink-0 text-xs ${statusCls}`} />
+        <span className="flex min-w-0 items-center gap-1">
+          <span className="tool-title-viewport">
+            <SwapSlot content={{ kind: 'label', text: label, mono: !description }} truncate shimmer={isRunning} />
+          </span>
+          {!expanded && !description && inputSummary && (
+            <span className="truncate text-text-muted">{inputSummary}</span>
           )}
+          {statusText && <span role="status" className={`shrink-0 whitespace-nowrap text-[10px] ${isDenied && !approvalFailed ? 'inline-flex items-center rounded-[2px] bg-error/8 px-1 py-px leading-none text-error' : approvalFailed ? 'text-warning' : hasError ? 'text-error' : 'text-text-muted'}`}>
+            <SwapSlot content={{ kind: 'label', text: statusText }} />
+          </span>}
         </span>
       </button>
-      <div className={`expand-panel ${expanded && (inputText || detail) ? 'is-open' : ''}`}>
+      <div className={`expand-panel ${expanded ? 'is-open' : ''}`}>
         <div>
+          <div className="mt-1 px-3 font-mono text-[10px] text-text-muted">{call.toolName}</div>
           {inputText && (
             <pre className="mt-1 whitespace-pre-wrap break-all rounded-md px-3 py-2 font-mono text-[11px] leading-relaxed bg-surface-overlay text-text-secondary">
               {inputText.slice(0, 500)}
@@ -616,39 +666,36 @@ function ToolCallItem({ call, isActive }: { call: ToolCallInfo; isActive?: boole
   )
 }
 
-function ToolCallGroup({ calls, isActive }: { calls: ToolCallInfo[]; isActive?: boolean }) {
+function ToolCallGroup({ calls, isActive, display }: { calls: ToolCallInfo[]; isActive?: boolean; display: ToolCallDisplay }) {
   const [expanded, setExpanded] = useState(false)
   const doneCount = calls.filter(c => c.state === 'output-available' || c.state === 'result').length
   const errorCount = calls.filter(c => c.state === 'output-error').length
-  const callingCount = calls.filter(c => c.state === 'input-streaming' || c.state === 'input-available' || c.state === 'call').length
-
-  if (calls.length === 1) {
-    return <div className="animate-fade-in"><ToolCallItem call={calls[0]} isActive={isActive} /></div>
-  }
+  const deniedCount = calls.filter(c => toolWasDenied(c) && !toolApprovalFailed(c)).length
+  const approvalErrorCount = calls.filter(toolApprovalFailed).length
+  const finishedCount = doneCount + errorCount + deniedCount + approvalErrorCount
+  const callingCount = calls.filter(toolIsCalling).length
 
   return (
     <div className="my-0.5 animate-fade-in">
-      <button
+      {calls.length > 1 && <button
         onClick={() => setExpanded(v => !v)}
+        aria-expanded={expanded}
         className="flex w-full items-center gap-1 py-0.5 text-[11px] text-text-muted transition-colors hover:text-text-secondary"
       >
         <Icon icon={callingCount > 0 && isActive ? iconLoading : iconCircleDot} className={`text-xs shrink-0 ${callingCount > 0 && isActive ? 'text-text-muted animate-spin' : 'text-text-muted'}`} />
-        {expanded ? (
-          <span>查看 {calls.length} 个步骤{errorCount > 0 ? ` · ${errorCount} failed` : ''}</span>
-        ) : (
-          <>
-            <span>查看 {calls.length} 个步骤</span>
-            {callingCount > 0 && (
-              <span className="ml-auto shrink-0 text-text-muted">
-                {doneCount + errorCount}/{calls.length}
-              </span>
-            )}
-          </>
+        <span>查看 {calls.length} 个步骤</span>
+        {errorCount > 0 && <span className="shrink-0 text-error/60">· {errorCount} 个失败</span>}
+        {deniedCount > 0 && <span className="shrink-0 text-error/60">· {deniedCount} 个已拒绝</span>}
+        {approvalErrorCount > 0 && <span className="shrink-0 text-warning">· {approvalErrorCount} 个确认异常</span>}
+        {callingCount > 0 && isActive && (
+          <span className="ml-auto shrink-0 text-text-muted">
+            {finishedCount}/{calls.length}
+          </span>
         )}
-      </button>
-      <div className={`expand-panel ${expanded ? 'is-open' : ''}`}>
-        <div className="pl-1 pt-0.5">
-          {calls.map(c => <ToolCallItem key={c.toolCallId} call={c} isActive={isActive} />)}
+      </button>}
+      <div className={calls.length > 1 ? `expand-panel ${expanded ? 'is-open' : ''}` : undefined}>
+        <div className={calls.length > 1 ? 'pl-1 pt-0.5' : undefined}>
+          {calls.map(c => <ToolCallItem key={c.toolCallId} call={c} isActive={isActive} display={display} />)}
         </div>
       </div>
     </div>
@@ -698,7 +745,7 @@ function useCollapseSteps(): boolean {
 type GroupItem =
   | { kind: 'part'; part: UIMessage['parts'][number]; idx: number }
   | { kind: 'tools'; calls: ToolCallInfo[] }
-  | { kind: 'viz'; path: string; title: string; network: boolean; toolCallId: string }
+  | { kind: 'viz'; path: string; title: string; network: boolean; toolCallId: string; canvasId: string }
 type DisplayItem = GroupItem | { kind: 'steps'; items: GroupItem[] }
 
 function InlineReasoning({ text, isStreaming }: { text: string; isStreaming: boolean }) {
@@ -841,7 +888,7 @@ export function LinesIndicator({ active, phase }: { active: boolean; phase: Stat
 const ROLL_STEPS = 2
 const SWAP_OUT_MS = 400
 
-type SlotContent = { kind: 'label'; text: string } | { kind: 'count'; count: number }
+type SlotContent = { kind: 'label'; text: string; mono?: boolean } | { kind: 'count'; count: number }
 
 // Reason: the ghost is the real number — it carries the width, the baseline and the
 // accessible name — while the reel overlays one column per digit, each column a strip
@@ -868,15 +915,15 @@ function RollingNumber({ value, roll }: { value: number; roll: boolean }) {
   )
 }
 
-function SlotBody({ content, animate }: { content: SlotContent; animate: boolean }) {
-  if (content.kind === 'label') return <>{content.text}</>
+function SlotBody({ content, animate, shimmer = false }: { content: SlotContent; animate: boolean; shimmer?: boolean }) {
+  if (content.kind === 'label') return <span className={`inline-block ${content.mono ? 'font-mono' : ''} ${shimmer ? 'shimmer-sweep' : ''}`}>{content.text}</span>
   return <>查看 <RollingNumber value={content.count} roll={animate} /> 个步骤</>
 }
 
 // Reason: the outgoing text has to stay mounted through its fade, and only a state
 // adjustment during render (React's documented pattern) keeps it around — a plain prop
 // swap would unmount it on the same frame the new text appears.
-export function SwapSlot({ content }: { content: SlotContent }) {
+export function SwapSlot({ content, truncate = false, shimmer = false }: { content: SlotContent; truncate?: boolean; shimmer?: boolean }) {
   const id = content.kind === 'label' ? `label:${content.text}` : `count:${content.count}`
   // Reason: capture the mount-time value only; state initializer is the lint-safe way to do this
   const [initialId] = useState(id)
@@ -893,25 +940,25 @@ export function SwapSlot({ content }: { content: SlotContent }) {
   }, [slot])
 
   return (
-    <span className="relative inline-block whitespace-nowrap">
+    <span className={`relative inline-block whitespace-nowrap ${truncate ? 'max-w-full align-bottom' : ''}`}>
       {slot.out && (
-        <span className="swap-out absolute left-0 top-0 whitespace-nowrap">
-          <SlotBody content={slot.out} animate={false} />
+        <span className={`swap-out absolute left-0 top-0 whitespace-nowrap ${truncate ? 'max-w-full truncate' : ''}`}>
+          <SlotBody content={slot.out} animate={false} shimmer={shimmer} />
         </span>
       )}
       {/* Reason: keyed by content so the enter animation restarts — in-place text
           updates do not retrigger a CSS animation. */}
       <span
         key={slot.id}
-        className={animate ? (slot.content.kind === 'count' ? 'swap-in-fast' : 'swap-in') : undefined}
+        className={`${truncate ? 'inline-block max-w-full truncate align-bottom' : ''} ${animate ? (slot.content.kind === 'count' ? 'swap-in-fast' : 'swap-in') : ''}`}
       >
-        <SlotBody content={slot.content} animate={animate} />
+        <SlotBody content={slot.content} animate={animate} shimmer={shimmer} />
       </span>
     </span>
   )
 }
 
-function StepsCollapse({ items, isActive, phase }: { items: GroupItem[]; isActive: boolean; phase: StatusPhase }) {
+function StepsCollapse({ items, isActive, phase, display }: { items: GroupItem[]; isActive: boolean; phase: StatusPhase; display: ToolCallDisplay }) {
   const [expanded, setExpanded] = useState(false)
   // Reason: a group that is not the live one must not speak — and a live one
   // outlives its phase silently, so idle freezes the wording here too.
@@ -924,41 +971,26 @@ function StepsCollapse({ items, isActive, phase }: { items: GroupItem[]; isActiv
     return n
   }, 0)
 
-  const showExpanded = expanded || (isActive && stepCount > 0)
-
-  // Reason: during streaming with no/one step, don't collapse — show inline or just spinner
-  if (!isActive && stepCount <= 1) {
-    return (
-      <>
-        {items.map((g) => {
-          if (g.kind === 'tools') {
-            return <ToolCallGroup key="tg-inline" calls={g.calls} isActive={false} />
-          }
-          if (g.kind === 'part' && g.part.type === 'reasoning') {
-            return <ReasoningBlock key={g.idx} text={g.part.text} isStreaming={false} />
-          }
-          return null
-        })}
-      </>
-    )
-  }
+  const showHeader = isActive || stepCount > 1
+  const showExpanded = !showHeader || expanded || (isActive && stepCount > 0)
 
   return (
     <div className="my-0.5">
-      <button
+      {showHeader && <button
         onClick={() => setExpanded(v => !v)}
-        className="group flex items-center gap-1 py-0.5 text-[11px] text-text-muted transition-colors hover:text-text-secondary"
+        aria-expanded={showExpanded}
+        className="group flex max-w-full items-center gap-1 py-0.5 text-[11px] text-text-muted transition-colors hover:text-text-secondary"
       >
         <LinesIndicator active={isActive} phase={isActive ? phase : 'idle'} />
         <SwapSlot content={isActive ? { kind: 'label', text: label } : { kind: 'count', count: stepCount }} />
         {!isActive && <Icon icon={iconChevronRight} className={`text-xs transition-all duration-200 ${expanded ? 'rotate-90 opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />}
-      </button>
+      </button>}
       {stepCount > 0 && (
         <div className={`expand-panel ${showExpanded ? 'is-open' : ''}`}>
-          <div className="ml-[calc(var(--spacing)*1.5+0.5px)] border-l border-text-muted/20 pl-3 pt-0.5">
+          <div className={showHeader ? 'ml-[calc(var(--spacing)*1.5+0.5px)] border-l border-text-muted/20 pl-3 pt-0.5' : undefined}>
             {items.map((g, i) => {
               if (g.kind === 'tools') {
-                return g.calls.map(c => <ToolCallItem key={c.toolCallId} call={c} isActive={isActive} />)
+                return g.calls.map(c => <ToolCallItem key={c.toolCallId} call={c} isActive={isActive} display={display} />)
               }
               if (g.kind === 'part' && g.part.type === 'reasoning') {
                 // Reason: only the trailing item of the trailing group can still be

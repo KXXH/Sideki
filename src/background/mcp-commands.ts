@@ -2,6 +2,7 @@ import { defineCommand } from 'just-bash'
 import type { Command, CommandContext } from 'just-bash'
 import { handleMcpMessage } from './mcp-manager'
 import type { McpToolMeta } from '../shared/mcp-client'
+import type { ExecutionApproval } from '../shared/approval-types'
 
 function decodeStdin(stdin: string): string {
   if (!stdin) return ''
@@ -82,6 +83,7 @@ async function handleCall(
   args: string[],
   ctx: CommandContext,
   tabId: number,
+  authorization?: ExecutionApproval,
 ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   if (args.length === 0) {
     return { stdout: '', stderr: 'Usage: mcp call <tool> [key=value ...] [--args JSON]\n', exitCode: 1 }
@@ -130,10 +132,13 @@ async function handleCall(
   }
 
   try {
-    const result = await handleMcpMessage('mcp:call-tool', {
+    const message = {
       qualifiedName: toolName,
       args: callArgs,
-    }, tabId)
+    }
+    const result = authorization
+      ? await handleMcpMessage('mcp:call-tool', message, tabId, authorization)
+      : await handleMcpMessage('mcp:call-tool', message, tabId)
     if (result && typeof result === 'object' && 'error' in result) {
       return { stdout: '', stderr: String((result as Record<string, unknown>).error) + '\n', exitCode: 1 }
     }
@@ -144,12 +149,12 @@ async function handleCall(
   }
 }
 
-export function createMcpCommand(tabId: number): Command {
+export function createMcpCommand(tabId: number, getAuthorization?: () => ExecutionApproval | undefined): Command {
   return defineCommand('mcp', async (args, ctx) => {
     const sub = args[0]
     switch (sub) {
       case 'list': return handleList(tabId)
-      case 'call': return handleCall(args.slice(1), ctx, tabId)
+      case 'call': return handleCall(args.slice(1), ctx, tabId, getAuthorization?.())
       default: return { stdout: '', stderr: USAGE, exitCode: 1 }
     }
   })

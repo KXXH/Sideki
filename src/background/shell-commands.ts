@@ -1,4 +1,5 @@
 import { defineCommand } from 'just-bash'
+import type { ExecutionApproval } from '../shared/approval-types'
 import type { Command, CommandContext } from 'just-bash'
 
 // Reason: just-bash stdin is ByteString (Latin-1 encoded UTF-8 bytes).
@@ -15,7 +16,7 @@ function decodeStdin(stdin: string): string {
   return new TextDecoder('utf-8').decode(bytes)
 }
 import {
-  execInTab, requireConsent, execScript,
+  execInTab, requireConsent as requestConsent, execScript,
   handleClick, handleType, handleScroll, handleScreenshot,
   handleWait, handleGetElementInfo, handleFindElement,
   handleDomSnapshot, handleNavigate, handleGetPageContent, handleExecuteJS,
@@ -278,7 +279,11 @@ export function parsePageSpec(spec: string): { pages: number[] } | { error: stri
   return { pages: [...pages].sort((a, b) => a - b) }
 }
 
-export function createPageCommands(tabId: number, currentMode?: 'chat' | 'pro', onMemoryUpdate?: (path: string, content: string) => void, sessionId?: string): Command[] {
+export function createPageCommands(tabId: number, currentMode?: 'chat' | 'pro', onMemoryUpdate?: (path: string, content: string) => void, sessionId?: string, getAuthorization?: () => ExecutionApproval | undefined): Command[] {
+  const requireConsent = (...args: Parameters<typeof requestConsent>) => {
+    const authorization = getAuthorization?.()
+    return authorization ? requestConsent(args[0], args[1], args[2], args[3], authorization) : requestConsent(...args)
+  }
   return [
     defineCommand('dom', async (args) => {
       const root = parseFlag(args, 'root') ?? undefined

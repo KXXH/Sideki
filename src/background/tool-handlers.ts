@@ -1,4 +1,5 @@
 import { loadConfig, loadSessionIndex } from '../shared/storage'
+import type { ExecutionApproval } from '../shared/approval-types'
 import { siteOriginOf, isSiteAllowed, grantSitePermission, SITE_ALLOWABLE_TOOLS } from '../shared/site-permissions'
 import { execBash, mirrorScreenshotToVfs, KEEP_SCREENSHOTS } from './shell'
 import { ensureSelectorLib, ensureResolver } from './element-resolver'
@@ -1891,9 +1892,14 @@ async function clearConsentHighlight(tabId: number): Promise<void> {
 
 export async function requireConsent(
   action: string, detail: string, tabId: number, highlight?: { tabId: number; target: string },
+  authorization?: ExecutionApproval,
 ): Promise<boolean> {
+  if (authorization) {
+    if (!authorization.isActive()) return false
+    if (authorization.mode !== 'ask') return true
+  }
   const config = await loadConfig()
-  if (config?.securityLevel === 'permissive' || config?.yoloMode) return true
+  if (!authorization && (config?.securityLevel === 'permissive' || config?.yoloMode)) return true
 
   let tab: chrome.tabs.Tab
   try {
@@ -1905,7 +1911,7 @@ export async function requireConsent(
   // Reason: site-level exemption only for interaction/navigation tools on real
   // web origins — execution class (js) and tab management always confirm
   const origin = SITE_ALLOWABLE_TOOLS.has(action) && tab.url ? siteOriginOf(tab.url) : null
-  if (origin && await isSiteAllowed(origin, action)) return true
+  if (origin && await isSiteAllowed(origin, action)) return !authorization || authorization.isActive()
 
   let resolvedDetail = detail
   if (highlight) {
@@ -1925,11 +1931,11 @@ export async function requireConsent(
       windowId: tab.windowId,
       origin: origin ?? undefined,
     })
-    const granted = response?.granted === true
+    const granted = response?.granted === true && (!authorization || authorization.isActive())
     if (granted && response?.alwaysAllow === true && origin) {
       await grantSitePermission(origin)
     }
-    return granted
+    return granted && (!authorization || authorization.isActive())
   } catch {
     return false
   } finally {
@@ -1939,19 +1945,32 @@ export async function requireConsent(
 
 export async function handleToolMessage(
   type: string, tabId: number, params: Record<string, unknown>,
+  authorization?: ExecutionApproval,
 ): Promise<unknown> {
   const toolName = type.replace('tool:', '')
   const handler = handlers[toolName]
   if (!handler) return { success: false, error: `Unknown tool: ${toolName}` }
+  if (authorization && !authorization.isActive()) return { success: false, error: '调用授权已取消或失效' }
+  if (toolName === 'bash') {
+    if (!authorization) return handleBash(tabId, params as { command: string; sessionId?: string })
+    const sessionId = authorization?.sessionId ?? (params.sessionId as string) ?? 'default'
+    const proMode = await sessionIsPro(sessionId)
+    return authorization
+      ? execBash(sessionId, tabId, params.command as string, proMode, authorization)
+      : execBash(sessionId, tabId, params.command as string, proMode)
+  }
 
   if (WRITE_TOOLS.has(toolName)) {
     const target = params.target as string | undefined
     const hl = ELEMENT_ACTIONS.has(toolName) && target ? { tabId, target } : undefined
-    const granted = await requireConsent(toolName, summarizeAction(toolName, params), tabId, hl)
+    const granted = authorization
+      ? await requireConsent(toolName, summarizeAction(toolName, params), tabId, hl, authorization)
+      : await requireConsent(toolName, summarizeAction(toolName, params), tabId, hl)
     if (!granted) return { success: false, error: 'Action denied by user' }
   }
 
   try {
+    if (authorization && !authorization.isActive()) return { success: false, error: '调用授权已取消或失效' }
     return await handler(tabId, params)
   } catch (e) {
     return { success: false, error: String(e) }

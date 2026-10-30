@@ -1,6 +1,7 @@
 import { execScript, handleExecuteJS, requireConsent, resolveFrameId } from './tool-handlers'
 import { serializeMonitorValue } from '../shared/monitor'
 import type { ScheduledTask } from '../shared/scheduled-task'
+import type { ExecutionApproval } from '../shared/approval-types'
 
 // Reason: executeScript serializes these functions; every dependency must live inside the function or travel as an argument.
 export function installMonitorRelay(token: string, expiresAt: number) {
@@ -110,9 +111,12 @@ export function installMonitorRuntime(
   }
 }
 
-export async function installPageMonitor(task: ScheduledTask, proMode: boolean): Promise<void> {
+export async function installPageMonitor(task: ScheduledTask, proMode: boolean, authorization?: ExecutionApproval): Promise<void> {
   const monitor = task.monitor!
-  if (!proMode && !await requireConsent('executeJS', monitor.code, task.tabId)) throw new Error('用户未允许安装页面监听')
+  if (authorization && !authorization.isActive()) throw new Error('调用授权已失效')
+  if (!proMode && !await (authorization
+    ? requireConsent('executeJS', monitor.code, task.tabId, undefined, authorization)
+    : requireConsent('executeJS', monitor.code, task.tabId))) throw new Error('用户未允许安装页面监听')
   if (monitor.expiresAt <= Date.now()) throw new Error('监听已到期，请重新创建')
   const frameId = monitor.frame ? await resolveFrameId(task.tabId, monitor.frame) : 0
   if (typeof frameId !== 'number') throw new Error(frameId.error)

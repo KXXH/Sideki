@@ -1,4 +1,5 @@
 import type { TimerWake } from '../shared/scheduled-task'
+import { canvasRequest } from '../shared/canvas-client'
 import { parsePageContent } from '../shared/parser'
 import { loadUserSkills } from '../shared/skills'
 import { buildOrogenLines } from '../shared/agent'
@@ -7,7 +8,7 @@ import { KernelMux } from '../shared/kernel/kernel-mux'
 import { KernelSyncHost } from '../shared/kernel/kernel-host'
 import { wireTurnAutomation } from '../shared/kernel/turn-automation'
 import type { KernelEnv, SessionRuntime } from '../shared/kernel/kernel-runtime'
-import type { ApiConfig, ChatSession, PageContent, ElementAttachment } from '../shared/types'
+import type { ApiConfig, ChatSession, PageContent, ElementAttachment, PermissionMode } from '../shared/types'
 import type { SkillPartData } from '../shared/message-protocol'
 
 // Reason: temporary probe — marks each offscreen document creation, so the
@@ -140,12 +141,14 @@ function createHost(rt: SessionRuntime): KernelSyncHost {
         .map(s => ({
           id: s.id, title: s.title, createdAt: s.createdAt, updatedAt: s.updatedAt,
           pageUrl: s.pageUrl, mode: s.mode ?? 'chat',
+          permissionMode: s.permissionMode,
           // Reason: list entries may be metadata-only (stripped bodies) —
           // surface the real count so the panel's empty-session filter works.
           messageCount: s.messageCount ?? s.messages?.length ?? 0,
         })),
       activeId: rt.sessionId,
       lastTurnTokens: rt.lastTurnTokens,
+      approvalState: rt.approvals.state,
       // Reason: extraction happens kernel-side on send — the panel's local
       // contextLoaded flag never flips in mirror mode, so the indicator would
       // stay on "load ctx" forever without this kernel-truth signal.
@@ -165,7 +168,7 @@ function createHost(rt: SessionRuntime): KernelSyncHost {
         // with the send — pin it onto the item so a queued flush keeps the page
         // the user actually asked from.
         const opts = { ...a.opts, page: a.opts?.page ?? a.pageInfo ?? undefined }
-        rt.kernel.handleSend(a.text, a.attachments, opts).catch(e => console.error('[offscreen] send failed:', e))
+        rt.kernel.handleSend(a.text, a.attachments, opts).catch(e => { if (e?.name !== 'AbortError') rt.kstate.error = e instanceof Error ? e : new Error(String(e)) })
       },
       'page-context': (args) => {
         const a = args as PageCtxArgs & { content: PageContent | null }
@@ -176,6 +179,7 @@ function createHost(rt: SessionRuntime): KernelSyncHost {
         rt.offerPageContext(a.content)
       },
       'stop': () => { rt.stop().catch(() => {}) },
+      'set-permission-mode': (args) => { void rt.setPermissionMode((args as { mode: PermissionMode }).mode).catch(error => console.error('[permissions] save failed', error)) },
       'clear-error': () => { rt.chat.clearError() },
       'remove-queued': (args) => { rt.kernel.removeQueued((args as { id: string }).id) },
       'clear-queue': () => { rt.kernel.clearQueue() },
@@ -188,6 +192,10 @@ function createHost(rt: SessionRuntime): KernelSyncHost {
       'flush-save': () => { rt.flushSave() },
     },
     requests: {
+      'approval-debug': () => rt.approvals.getDebugSnapshot(),
+      'approval-debug-clear': () => { rt.approvals.clearDebugHistory(); return { success: true } },
+      'approval-debug-test': async (args) => { await rt.approvals.testApproval((args as { command: string }).command); return { success: true } },
+      'set-permission-mode': async (args) => { await rt.setPermissionMode((args as { mode: PermissionMode }).mode); return { success: true } },
       // Reason: the Dev inspector needs the frozen craton for this exact
       // session runtime. Full page prompts are too large for 80ms extras.
       'session-inspector': () => ({
@@ -210,6 +218,26 @@ void mux.start().then(async () => {
 }).catch(e => console.error('[offscreen] pool init failed:', e))
 
 const scheduledSessions = new Set<string>()
+chrome.runtime.onMessage.addListener((msg, _sender, respond) => {
+  if (msg?.type !== 'canvas:enqueue-offscreen') return undefined
+  void (async () => {
+    if (!schedulerReady) throw new Error('后台执行环境正在准备，请稍后重试')
+    await pool.refreshSessions()
+    const rt = await pool.retain(msg.sessionId)
+    if (!rt) throw new Error('来源会话不存在')
+    try {
+      const valid = await canvasRequest<boolean>(m => chrome.runtime.sendMessage(m), 'validate-target', { sessionId: rt.sessionId, tabId: rt.canvasTargetTabId })
+      if (!valid) throw new Error('请打开来源会话并恢复执行页面绑定后重试')
+      const run = rt.kernel.handleSend(msg.prompt, undefined, { canvasSource: { canvasId: msg.canvasId, title: msg.title, tabId: rt.canvasTargetTabId! } })
+      void run.catch(error => { if (error?.name !== 'AbortError') rt.kstate.error = error instanceof Error ? error : new Error(String(error)) })
+      const messageId = await rt.kernel.whenAccepted()
+      respond({ accepted: true, messageId })
+      // Reason: retain the runtime until the accepted send settles, including time in its queue.
+      void run.finally(() => pool.release(rt.sessionId)).catch(() => {})
+    } catch (error) { pool.release(rt.sessionId); throw error }
+  })().catch(error => respond({ accepted: false, error: String(error) }))
+  return true
+})
 chrome.runtime.onMessage.addListener((msg, _sender, respond) => {
   if (msg.type !== 'schedule:wake') return undefined
   if (!schedulerReady || scheduledSessions.has(msg.sessionId)) {

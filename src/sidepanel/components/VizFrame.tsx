@@ -5,8 +5,10 @@ import { getActiveSessionId } from '../../shared/tools/bridge'
 import { readHtmlArtifactTheme } from '../../shared/html-artifact-theme'
 import { buildHtmlPreviewUrl, validateHtmlArtifact } from '../../shared/html-artifact'
 import { iconAlertCircleOutline } from '../../shared/icons'
+import { createCanvasHost, type CanvasHost } from '../../shared/canvas-host'
 
 interface Props {
+  canvasId?: string
   sessionId: string
   path: string
   title: string
@@ -20,8 +22,10 @@ interface FrameMessage {
   message?: string
 }
 
-export default function VizFrame({ sessionId, path, title, network = false }: Props) {
+export default function VizFrame({ sessionId, path, title, canvasId = `path:${path}`, network = false }: Props) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  const canvasHostRef = useRef<CanvasHost | null>(null)
+  const [sdk, setSdk] = useState<CanvasHost['initial'] | null>(null)
   const idRef = useRef(crypto.randomUUID())
   const renderedRef = useRef(false)
   const hasRenderedRef = useRef(false)
@@ -55,6 +59,7 @@ export default function VizFrame({ sessionId, path, title, network = false }: Pr
       // Reason: viz:ready carries no id (it announces the frame), every later
       // message must match this instance's nonce.
       if (data.type !== 'viz:ready' && data.id !== idRef.current) return
+      if (canvasHostRef.current?.handle(data)) return
       if (data.type === 'viz:ready') {
         setReady(true)
       } else if (data.type === 'viz:resize') {
@@ -88,28 +93,34 @@ export default function VizFrame({ sessionId, path, title, network = false }: Pr
     firstFrameFailureRef.current = false
     if (!resolvedSessionId) return
     chrome.runtime.sendMessage({ type: 'dev:cat', sessionId: resolvedSessionId, path })
-      .then((resp: { success?: boolean; content?: string; error?: string } | undefined) => {
+      .then(async (resp: { success?: boolean; content?: string; error?: string } | undefined) => {
         if (cancelled) return
         if (!resp?.success || typeof resp.content !== 'string') {
           setError(resp?.error || `无法读取快照文件 ${path}`)
           return
         }
         validateHtmlArtifact(resp.content, { network })
+        const host = await createCanvasHost({ sessionId: resolvedSessionId, canvasId, path, title }, message => {
+          iframeRef.current?.contentWindow?.postMessage({ ...message, id: idRef.current }, '*')
+        })
+        if (cancelled) { host.dispose(); return }
+        canvasHostRef.current = host
+        setSdk(host.initial)
         setError(null)
         setHtml(resp.content)
       })
       .catch((e: unknown) => {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e))
       })
-    return () => { cancelled = true }
-  }, [resolvedSessionId, path, network, readNonce])
+    return () => { cancelled = true; canvasHostRef.current?.dispose(); canvasHostRef.current = null }
+  }, [resolvedSessionId, canvasId, path, title, network, readNonce])
 
   const applyRendered = () => {
-    if (!ready || html === null || renderedRef.current) return
+    if (!ready || html === null || sdk === null || renderedRef.current) return
     const frame = iframeRef.current
     if (!frame?.contentWindow) return
     frame.contentWindow.postMessage(
-      { type: 'viz:render', id: idRef.current, html, theme: readHtmlArtifactTheme() },
+      { type: 'viz:render', id: idRef.current, html, theme: readHtmlArtifactTheme(), sideki: sdk },
       '*',
     )
     renderedRef.current = true
@@ -117,7 +128,7 @@ export default function VizFrame({ sessionId, path, title, network = false }: Pr
 
   // Reason: wait for both the frame handshake and the file read — posting into
   // an unready frame would be dropped silently.
-  useEffect(applyRendered, [ready, html])
+  useEffect(applyRendered, [ready, html, sdk])
 
   // Reason: theme switches repaint tokens inside the frame without replaying
   // the fragment (content is immutable for a snapshot).
@@ -167,7 +178,7 @@ export default function VizFrame({ sessionId, path, title, network = false }: Pr
   }
 
   const previewUrl = resolvedSessionId
-    ? buildHtmlPreviewUrl(chrome.runtime.getURL('src/preview/index.html'), resolvedSessionId, path, network)
+    ? buildHtmlPreviewUrl(chrome.runtime.getURL('src/preview/index.html'), resolvedSessionId, path, network, canvasId)
     : null
 
   return (

@@ -107,7 +107,7 @@ describe('visualize preview URL capabilities', () => {
     expect(files.get(result.path)).toBe(html)
     expect([...files.keys()]).toHaveLength(2)
     const target = parseVfsPreviewLink(result.previewPath)!
-    expect(target).toEqual({ path: result.path, network: true })
+    expect(target).toEqual({ path: result.path, network: true, canvasId: 'call-a' })
     const url = new URL(buildHtmlPreviewUrl('chrome-extension://id/src/preview/index.html', 'session-a', target.path, target.network))
     const { readHtmlPreview } = await import('../../src/preview/preview-host')
     await expect(readHtmlPreview(chrome.runtime.sendMessage, url.searchParams.get('session')!, url.searchParams.get('file')!, readHtmlPreviewNetwork(url.searchParams)))

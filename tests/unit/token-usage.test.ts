@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { persistUsage } from '../../src/background/token-usage'
 import {
   cacheHitRate, formatCacheHitRate, formatUsageValue, isUsageEvent, localUsageDay, pruneUsage, recordUsage, sumUsage,
-  usageCsv, usageDays, USAGE_ENABLED_KEY, USAGE_STORAGE_KEY, type UsageEvent, type UsageStore,
+  usageCsv, usageDays, usageLastAt, usageSource, usageSessionLabel, USAGE_ENABLED_KEY, USAGE_STORAGE_KEY, type UsageEvent, type UsageStore,
 } from '../../src/shared/token-usage'
 
 const now = new Date(2026, 9, 22, 12)
@@ -12,6 +12,44 @@ const event = (overrides: Partial<UsageEvent> = {}): UsageEvent => ({
 })
 
 describe('usage accounting', () => {
+  it('retains the latest actual call time across delayed events and does not fabricate time for legacy rows', () => {
+    const later = now.getTime() + 60_000
+    let store = recordUsage(undefined, event({ at: later }), now)
+    store = recordUsage(store, event({ at: now.getTime() }), now)
+    expect(store.rows[0].lastAt).toBe(later)
+    expect(usageLastAt(store.rows[0])).toBe(later)
+    expect(usageCsv(store.rows)).toContain(new Date(later).toISOString())
+    delete store.rows[0].lastAt
+    expect(usageLastAt(store.rows[0])).toBe(new Date(`${store.rows[0].day}T00:00:00`).getTime())
+    expect(usageCsv(store.rows)).not.toContain(new Date(later).toISOString())
+    store = recordUsage(store, event(), now)
+    expect(store.rows[0].lastAt).toBe(now.getTime())
+    expect(sumUsage(store.rows).calls).toBe(3)
+  })
+  it('separates main and approval calls belonging to the same chat without changing combined totals', () => {
+    let store = recordUsage(undefined, event(), now)
+    delete store.rows[0].source
+    store = recordUsage(store, event({ source: 'approval' }), now)
+    store = recordUsage(store, event({ source: 'main' }), now)
+    expect(store.rows).toHaveLength(2)
+    expect(sumUsage(store.rows.filter(row => usageSource(row) === 'main')).tokens.input).toBe(2000)
+    expect(sumUsage(store.rows.filter(row => usageSource(row) === 'approval')).tokens.input).toBe(1000)
+    expect(sumUsage(store.rows).calls).toBe(3)
+    expect(store.rows.every(row => row.session === 'session-a')).toBe(true)
+    const csv = usageCsv(store.rows, { 'session-a': '同一个聊天' })
+    expect(csv).toContain('"source"')
+    expect(csv).toContain('"同一个聊天","main","2"')
+    expect(csv).toContain('"同一个聊天","approval","1"')
+  })
+
+  it('recognizes old approval rows without inventing a parent chat or losing counts', () => {
+    const store = recordUsage(undefined, event({ session: 'approval:old-request' }), now)
+    delete store.rows[0].source
+    expect(usageSource(store.rows[0])).toBe('approval')
+    expect(usageSessionLabel(store.rows[0], {})).toBe('历史自动审批（未关联会话）')
+    expect(usageCsv(store.rows)).toContain('"approval:old-request","历史自动审批（未关联会话）","approval"')
+    expect(sumUsage(store.rows).tokens.input).toBe(1000)
+  })
   it('weights cache hit rate by input tokens and excludes output and cache writes', () => {
     let store = recordUsage(undefined, event(), now)
     store = recordUsage(store, event({ tokens: { input: 9000, output: 5000, read: 900, write: 1000, reasoning: null } }), now)
@@ -95,6 +133,8 @@ describe('usage accounting', () => {
     expect(isUsageEvent(event({ model: 'x'.repeat(201) }))).toBe(false)
     expect(isUsageEvent(event({ tokens: { input: -1, output: 0, read: null, write: null, reasoning: null } }))).toBe(false)
     expect(isUsageEvent({ ...event(), tokens: {} })).toBe(false)
+    expect(isUsageEvent({ ...event(), source: 'unknown' })).toBe(false)
+    expect(isUsageEvent(event({ source: 'approval' }))).toBe(true)
   })
 })
 

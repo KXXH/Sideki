@@ -37,6 +37,11 @@ describe('agentFingerprint — provider fields', () => {
     expect(agentFingerprint(ui)).toBe(ref)
   })
 
+  it('does not rebuild the agent or its description-enabled tools for tool presentation changes', () => {
+    expect(agentFingerprint({ ...base, toolCallDisplay: 'raw' })).toBe(agentFingerprint(base))
+    expect(agentFingerprint({ ...base, toolCallDisplay: 'description' })).toBe(agentFingerprint(base))
+  })
+
   it('does not rebuild for a math display toggle; the craton samples it only when otherwise built', () => {
     expect(agentFingerprint({ ...base, labSingleDollarMath: true })).toBe(agentFingerprint(base))
     expect(agentFingerprint({ ...base, labSingleDollarMath: false })).toBe(agentFingerprint(base))

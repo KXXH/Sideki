@@ -1,10 +1,12 @@
 import { tool } from 'ai'
 import { z } from 'zod'
+import { toolDescriptionInput } from './tool-description'
 import { getSkillContent } from '../skills'
 
 export const useSkillTool = tool({
   description: 'Load a skill by name to get specialized instructions for a task. Use `skill list` in bash to see available skills.',
   inputSchema: z.object({
+    description: toolDescriptionInput,
     name: z.string().describe('Skill name (e.g. "seo-audit")'),
   }),
   execute: async ({ name }) => {

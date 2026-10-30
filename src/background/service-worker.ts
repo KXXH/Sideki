@@ -1,5 +1,8 @@
 import { registerScheduledTasks, captureScheduledTab } from './scheduled-tasks'
+import { registerCanvasRequests } from './canvas-requests'
 import { registerTokenUsage } from './token-usage'
+import { approvalManager } from './approval-manager'
+import type { ApprovalPrepareInput, ApprovalReference } from '../shared/approval-types'
 import { handleToolMessage, execScript, type ExecuteScriptFn } from './tool-handlers'
 import { createVfsUploadReceiver } from './vfs-upload'
 import { pickerScript, pickerGuardScript } from './element-picker'
@@ -33,7 +36,7 @@ import { loadUserSkills } from '../shared/skills'
 import { handleMcpMessage } from './mcp-manager'
 import { applyCurationPlan, undoCuration } from '../shared/memory-storage'
 import { probeAndConnect, handleStorageChange, handleBackupNotify, getBackupStatus, isPaired, discover, pair, unpair, requestRestore, ensureConnected, getSyncState } from './backup-client'
-import { resolveOperatingTab, releaseTurn, touchTurn, operatingTabOf, registerTabLockListeners, setPageLockIndicatorPreference } from './tab-locks'
+import { resolveOperatingTab, releaseTurn, touchTurn, operatingTabOf, registerTabLockListeners, setPageLockIndicatorPreference, updateTurnActivity } from './tab-locks'
 import { OVERLAY_SELECTOR } from '../shared/input'
 import { setAiPointerEnabled } from './ai-pointer'
 import { syncRequestIdentity } from './dnr'
@@ -469,6 +472,10 @@ async function handleExtractContent(tabId: number) {
 }
 
 registerScheduledTasks(ensureOffscreen)
+registerCanvasRequests(async () => {
+  const result = await ensureOffscreen()
+  if (!result.success) throw new Error(result.error ?? '后台执行环境不可用')
+})
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // Reason: env proxy for the offscreen kernel — offscreen documents can only
@@ -906,14 +913,39 @@ if (message.type === 'env:history-append') {
     requestRestore().then(sendResponse).catch(e => sendResponse({ error: String(e) }))
     return true
   }
+  if (message.type?.startsWith('approval:')) {
+    ;(async () => {
+      switch (message.type) {
+        case 'approval:prepare': return approvalManager.prepare(message as unknown as ApprovalPrepareInput)
+        case 'approval:bash': return approvalManager.bash(message.requestId, message.command)
+        case 'approval:complete': return approvalManager.complete(message.requestId, message.decision, message.reason)
+        case 'approval:claim': await approvalManager.claim(message.approval, message.toolName, message.args, message.tabId); return { success: true }
+        case 'approval:cancel':
+        case 'approval:finish': approvalManager.finish(message.requestId); return { success: true }
+        case 'approval:cancel-session': approvalManager.cancelSession(message.sessionId); return { success: true }
+        default: throw new Error('Unknown approval operation')
+      }
+    })().then(sendResponse).catch(error => sendResponse({ decision: 'deny', error: String(error), reason: String(error) }))
+    return true
+  }
   if (message.type?.startsWith('mcp:')) {
-    handleMcpMessage(message.type, message, message.tabId)
+    ;(async () => {
+      const authorization = message.type === 'mcp:call-tool' && message.approval
+        ? await approvalManager.claim(message.approval as ApprovalReference, message.qualifiedName, message.args ?? {}, message.tabId)
+        : undefined
+      return handleMcpMessage(message.type, message, message.tabId, authorization)
+    })()
       .then(sendResponse)
       .catch(e => sendResponse({ error: e instanceof Error ? e.message : String(e) }))
     return true
   }
   if (message.type?.startsWith('tool:')) {
-    handleToolMessage(message.type, message.tabId, message.params ?? {}).then(sendResponse)
+    ;(async () => {
+      const authorization = message.approval
+        ? await approvalManager.claim(message.approval as ApprovalReference, message.type.slice(5), message.params ?? {}, message.tabId)
+        : undefined
+      return handleToolMessage(message.type, message.tabId, message.params ?? {}, authorization)
+    })().then(sendResponse).catch(error => sendResponse({ success: false, error: String(error) }))
     return true
   }
   // Reason: the turn's operating tab — resolved from the session's own tab
@@ -943,6 +975,11 @@ if (message.type === 'env:history-append') {
   // staleness backstop.
   if (message.type === 'tab-lock:touch') {
     touchTurn(message.sessionId)
+    sendResponse({ ok: true })
+    return undefined
+  }
+  if (message.type === 'tab-lock:activity') {
+    updateTurnActivity(message.sessionId, message.activities)
     sendResponse({ ok: true })
     return undefined
   }

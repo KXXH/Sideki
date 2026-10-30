@@ -9,6 +9,7 @@ import { formatSize, findArchiveCutoff } from '../../shared/format'
 import { agentTools } from '../../shared/tools'
 import { sessionSnapshotRef, ARCHIVE_KEEP_TURNS } from '../hooks/useSidekickChat'
 import type { ChatSession } from '../../shared/types'
+import ApprovalDebugPanel from '../components/ApprovalDebugPanel'
 
 interface FileEntry {
   path: string
@@ -112,6 +113,8 @@ export default function DevView({ tabId }: Props) {
   const [histIdx, setHistIdx] = useState(-1)
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set(['/']))
   const [showInspector, setShowInspector] = useState(false)
+  const [showApprovals, setShowApprovals] = useState(false)
+  const [approvalRefresh, setApprovalRefresh] = useState(0)
   const [inspector, setInspector] = useState<InspectorData | null>(null)
   const [expandedMsgIdx, setExpandedMsgIdx] = useState<number | null>(null)
   const termRef = useRef<HTMLDivElement>(null)
@@ -121,7 +124,10 @@ export default function DevView({ tabId }: Props) {
     loadSessionIndex().then(s => {
       const sorted = s.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
       setSessions(sorted)
-      if (sorted.length > 0 && !sessionId) setSessionId(sorted[0].id)
+      if (sorted.length > 0 && !sessionId) {
+        const active = sessionSnapshotRef.current?.().sessionId
+        setSessionId(sorted.find(session => session.id === active)?.id ?? sorted[0].id)
+      }
     })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -260,6 +266,7 @@ export default function DevView({ tabId }: Props) {
         <button
           onClick={() => {
             const next = !showInspector
+            setShowApprovals(false)
             setShowInspector(next)
             if (next) buildInspectorData().then(setInspector)
           }}
@@ -268,13 +275,19 @@ export default function DevView({ tabId }: Props) {
           Session
         </button>
         <button
-          onClick={() => { if (showInspector) { buildInspectorData().then(setInspector) } else { refreshFiles() } }}
+          onClick={() => { setShowApprovals(value => !value); setShowInspector(false) }}
+          className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] transition-colors ${showApprovals ? 'bg-accent/15 text-accent' : 'text-text-muted hover:bg-surface-raised hover:text-text-secondary'}`}
+        >审批 Agent</button>
+        <button
+          onClick={() => { if (showApprovals) setApprovalRefresh(value => value + 1); else if (showInspector) { buildInspectorData().then(setInspector) } else { refreshFiles() } }}
           className="rounded-md p-0.5 text-text-muted transition-colors hover:bg-surface-raised hover:text-text-secondary"
           title="Refresh"
         >
           <Icon icon={iconRefresh} className="text-xs" />
         </button>
       </div>
+
+      {showApprovals && <ApprovalDebugPanel key={sessionId} sessionId={sessionId} refreshKey={approvalRefresh} />}
 
       {/* Session Inspector — what the next turn will send (craton + history + orogen) */}
       {showInspector && (
@@ -364,7 +377,7 @@ export default function DevView({ tabId }: Props) {
       )}
 
       {/* File tree + preview */}
-      {!showInspector && <><div className="flex min-h-0 flex-1 flex-col border-b border-border-muted">
+      {!showInspector && !showApprovals && <><div className="flex min-h-0 flex-1 flex-col border-b border-border-muted">
         <div className="flex min-h-0 flex-1">
           {/* Tree */}
           <div className="w-1/2 overflow-y-auto border-r border-border-muted p-2">

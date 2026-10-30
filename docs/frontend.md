@@ -2,6 +2,8 @@
 
 本文以当前源码为准。产品展示名为 Sideki；`useSidekickChat`、`SidekickKernel`、`sidekick_*` 存储键等代码标识沿用原名。
 
+MCP OAuth 新客户端注册使用 `client_name: 'Sideki'`。已有注册仍复用 `mcp_client_{serverId}` 下的 `client_id` 和 `mcp_tokens_{serverId}` 下的凭据，不因展示名变更清除授权；授权服务保存的旧客户端名称不会通过修改本地元数据自动更新。
+
 ## 两种宿主，一个内核模型
 
 `ChatView` 从 `sidekick_config.labKernelHost` 选择宿主；只有显式配置为 `'panel'` 时使用面板宿主，缺省为 `'offscreen'`。
@@ -79,6 +81,20 @@ Agent 按需构建：进入或新建会话不会立即提取页面、连接 MCP 
 
 ## 消息协议与附件
 
+### 工具调用描述
+
+15 个内置工具的输入均提供可选 `description`，要求模型先生成简短中文动作描述，再生成其他参数；不同模型及协议不保证字段顺序。该字段随正常工具调用生成，不额外请求 LLM；完整描述到达前、旧调用或缺失描述时保留原始工具名，不生成中文兜底。MCP 工具不改写其 schema，也不把其业务参数 `description` 当作显示标题。
+
+「外观 → 显示工具操作描述」开关对应 `toolCallDisplay: 'description' | 'raw'`，缺失时默认开启。描述未到时保留工具名和流式参数摘要；关闭后始终显示工具名和参数摘要。切换仅影响当前及历史工具卡呈现，不改工具 schema、调用输入、持久化消息、模型请求或页面指示器；`description` 仍生成并保留，自动审批不使用该展示描述作为授权证据。
+
+输入框权限菜单设置当前对话的 `permissionMode`（请求批准、自动审批、全部允许），随会话保存；三种模式分别使用问号盾牌、勾选盾牌与感叹号盾牌图标，收起的菜单入口也显示当前模式图标。「全部允许」的入口、菜单图标和名称使用主题 warning 色高亮，选中与展开时使用浅警示色背景。设置页只修改新对话的 `defaultPermissionMode`。工具卡在确认期间显示「确认操作…」与中性实心盾牌；拒绝使用红色实心盾牌、中央镂空 X 与浅红底、红字、微圆角的「已拒绝」Tag，文字与低透明度底色均跟随主题 error token；审批执行异常显示琥珀色盾牌「确认异常」，工具调用出错使用红色实心感叹号圆圈「调用失败」。状态保持单行，参数和原因仅由用户点击展开，状态变化不自动展开。详见 [权限与审批](permissions.md)。
+
+流式阶段由 `src/shared/tool-description.ts` 检查 SDK part 的 `rawInput`，只在顶层 `description` 字符串闭合且可解析后发布完整文案，兼容转义引号、嵌套对象及命令先到。卡片通过原有 `SwapSlot` 过渡替换标题，后续命令 token 不重复触发标题动画；展开仍显示工具名、实际参数及结果。折叠组保留阶段文案和步骤计数，不生成组合标题。
+
+两宿主通过 `src/shared/kernel/tool-activity.ts` 订阅内核，发送去重的 `tab-lock:activity`；默认后台路径不依赖面板可见性。SW 仅向该 session 当前持有的操作栈顶页面投影描述，不因此获取锁或选择窗口 active tab。页面灵动岛的展示节奏见 [Tab 模型](background-task-tab-model.md)。
+
+### 消息与附件格式
+
 源码：`src/shared/message-protocol.ts`、`src/shared/attachment-mirror.ts`、`AttachmentPreview.tsx`、`MessageList.tsx`。
 
 当前写入的消息使用 v2 结构，`metadata.v = 2`：
@@ -120,6 +136,12 @@ Agent 按需构建：进入或新建会话不会立即提取页面、连接 MCP 
 | `finish` | 写入 completionTokens、promptTokens、reasoningTokens、elapsed、ttft、reasoningElapsed、speed |
 
 上下文表优先显示最新 step 的输入 token，而非多步调用输入 token 的累计和。冷加载时回退到历史消息的 `promptTokens`；没有精确值才用文本字符数 / 3 与 1200 token 工具开销估算。panel 估算包含当前页面内容；镜像缺少页面全文时只估算消息。估算不是模型 tokenizer 的精确计数。
+
+用量统计通过 provider 级 `usageMiddleware` 逐次记录，和上述聊天上下文表独立。事件及聚合行包含 `source: 'main' | 'approval'`；同一天、会话、provider/model 的主会话与审批分别聚合，审批归属真实父会话。传输用的 `x-session-id: approval:{requestId}` 与统计身份分离。未带 source 的旧普通记录按 main 处理，旧 `approval:*` 记录按 approval 处理；缺少父会话信息时显示「历史自动审批（未关联会话）」，不猜测归属、不丢弃或重复计数。
+
+「用量统计」支持时间、Provider、全部／主会话／自动审批来源与会话名称/ID 搜索，筛选同时作用于总量、缓存命中率、每日图表、Provider/Session 明细与 CSV 导出。明细默认 Session 维度、按最近使用排序，也可按用量或请求次数排序。会话是父项，合计当前筛选下主会话与自动审批的用量；展开后分别显示主会话、自动审批子项及各自缓存与模型明细。Provider 维度同样按 Provider/model 作父项、来源作子项；旧审批数据仍留在未关联的历史审批父项。每页渲染 10 个父项，主会话与审批子项不跨页拆分；支持前后翻页和页码跳转，筛选、排序或维度变化回到第一页，实时裁剪后页码自动限制在有效范围。分页不限制汇总、图表或导出的记录范围，CSV 仍按原始聚合行输出并包含 source 列，不额外插入父项合计以免重复计数。
+
+每条聚合行的可选 `lastAt` 保存实际模型调用事件的最大时间戳，延迟到达的旧事件不使它倒退；明细展示该最近使用时间，CSV 的 last_used_at 列输出 ISO 时间。旧行没有该字段时仅以统计日期排序和显示，不借用会话改名等元数据更新时间，不伪造时分。搜索只读取会话索引，不加载消息正文。缓存读写、推理与缺失字段口径沿用原逻辑。统计开关与 90 天／1 MiB 保留上限保持不变。
 
 ## 压缩历史与队列
 

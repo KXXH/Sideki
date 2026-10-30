@@ -45,6 +45,20 @@ describe('provider integration', () => {
     expect(JSON.stringify(message)).not.toContain('hello')
   })
 
+  it('keeps approval transport identity separate from its parent chat accounting', async () => {
+    const fetch = vi.fn().mockResolvedValue(Response.json({ choices: [{ message: { role: 'assistant', content: 'OK' }, finish_reason: 'stop' }],
+      usage: { prompt_tokens: 100, completion_tokens: 10, prompt_tokens_details: { cached_tokens: 80 } } }))
+    vi.stubGlobal('fetch', fetch)
+    const onUsage = vi.fn()
+    const model = createProvider(cfg, { sessionId: 'approval:request', usage: { sessionId: 'parent-chat', source: 'approval', onUsage } })
+    await generateText({ model, prompt: 'review' })
+    expect(new Headers(fetch.mock.calls[0][1].headers).get('x-session-id')).toBe('approval:request')
+    const records = vi.mocked(chrome.runtime.sendMessage).mock.calls.filter(([message]) => message.type === 'usage:record')
+    expect(records).toHaveLength(1)
+    expect(records[0][0].event).toMatchObject({ session: 'parent-chat', source: 'approval', tokens: { input: 100, output: 10, read: 80 } })
+    expect(onUsage).toHaveBeenCalledExactlyOnceWith({ input: 100, output: 10, read: 80, write: null, reasoning: null })
+  })
+
   it('requests streaming usage and counts the terminal usage once', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response([
       'data: {"choices":[{"index":0,"delta":{"content":"OK"},"finish_reason":null}]}',

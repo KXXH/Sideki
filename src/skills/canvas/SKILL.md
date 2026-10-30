@@ -81,9 +81,34 @@ visualize({ path: '/viz/live.html', title: '实时指标', network: true })
 - 显式 `network: true` 后才可用 HTTPS 远程依赖和请求、WSS socket；不因此获得登录态或跨域豁免。
 - 相对路径、VFS 资源引用、本地模块都不可用：CSS/JS/SVG 内联，图片等用 data URL，联网时可用 HTTPS。不要把新标签页当作 VFS 网站服务器。
 - 不支持 iframe/object/embed、base、meta http-equiv、外部导航和表单提交；`#fragment` 页内锚点可用。
-- 不提供 Chrome API、Node、本机文件、宿主页面 DOM、回连 agent 的通道。交互须在内容内部完成。
+- 不提供 Chrome API、Node、本机文件或宿主页面 DOM。画布和新标签页均提供受限的 `window.sideki` SDK，详见下文；不能直接调用 agent 工具。
 - 不支持 eval、Function 动态编译、document.write。脚本在内容挂载后执行，不依赖 DOMContentLoaded/load 来初始化。
 - 新标签页默认离线；独立 HTML 用链接的 `?network=1` 显式声明联网。画布用 `visualize({path, network:true})`；分享工具返回的 `previewPath` 时保留同一模式，两个流程不互为前置。
+
+## 状态与后续对话 SDK
+
+两个展示入口均提供 `window.sideki`：
+
+- `sideki.widgetState`：同步读取已恢复的 `{ modelContent, privateContent }`。返回的是副本，直接修改不会保存。
+- `await sideki.setWidgetState({ modelContent?, privateContent? })`：字段整体替换，省略字段保留，`null` 清空；每个字段不超过 8 KiB JSON UTF-8。返回 `{ revision }`。失败会 reject，应在界面展示错误。
+- `await sideki.sendFollowUpMessage({ prompt, title? })`：宿主确认后向来源会话发送消息；返回 `{ status: 'queued', messageId }` 或 `{ status: 'cancelled' }`。prompt 最多 4000 字符，title 最多 120 字符。缺少来源会话、后台未就绪或页面绑定失效时明确 reject，不会改发到当前会话。
+
+`modelContent` 仅保存有助于后续回答的选择/参数。内容实际变化才标记 dirty；下一条用户消息自动携带当前会话最近 3 个模型状态变化画布中尚未提交的快照。`privateContent` 保存展开、缩放等界面状态，永不发送给模型。画布发起后续消息时，来源画布的当前状态始终计入最多 3 个名额。
+
+初始化从 `widgetState` 恢复，监听 `sideki:statechange` 获取其他窗口同步的状态。不要在加载或恢复事件中重新保存，不要把每帧动画/hover 写入状态。需要发送当前选择时，先 await 状态写入再请求后续对话：
+
+```js
+button.addEventListener('click', async () => {
+  try {
+    await sideki.setWidgetState({ modelContent: { city: selectedCity } });
+    await sideki.sendFollowUpMessage({ prompt: '根据当前城市生成行程', title: '生成行程' });
+  } catch (error) {
+    status.textContent = error.message;
+  }
+});
+```
+
+隐藏的渲染自检环境保留 API 但明确拒绝写入和发送，不产生正式副作用；将调用放在用户控件事件内。联网不改变 SDK 权限。
 
 ## 主题与配色
 

@@ -1,7 +1,7 @@
 export const HTML_ARTIFACT_CAPABILITIES = `HTML artifacts have the same capabilities in the inline canvas and new-tab preview; opening a tab changes the viewport, not permissions or APIs.
 Both accept self-contained complete HTML documents or fragments, inline DOM/CSS/JavaScript/SVG, local interactive controls, and the same host theme tokens/classes. Scripts run after the content is mounted: initialize directly instead of waiting for DOMContentLoaded/load or relying on a fresh browser navigation lifecycle. Keep all dependencies inline or use data:/blob: resources; relative paths, other VFS files and local modules are unavailable on both surfaces.
 Offline is the default: no network requests or remote dependencies. Declare network: true in visualize, or add ?network=1 to the HTML VFS link for an independent new-tab preview, to allow HTTPS resources/fetch and WSS sockets. The preview URL is the only source of its network mode: missing, invalid or duplicated network values mean offline; network=0 is explicitly offline. Online mode still has an opaque origin, no inherited login identity, and normal CORS restrictions; authenticated services may fail. Use HTTPS CDN scripts/styles only in online mode.
-Neither surface exposes Chrome APIs, Node.js, the host page DOM, the user's browser login context, or a callback to the agent. Nested documents (iframe/object/embed), external navigation, form submission, document.write, eval and Function compilation are unavailable. Use #fragment links for in-document navigation. Theme, permissions and resource rules remain the same when switching surfaces; responsive layout may change with viewport size.`
+Both surfaces expose window.sideki: widgetState reads restored {modelContent, privateContent}; await setWidgetState({modelContent?, privateContent?}) persists field replacements (null clears, omitted fields stay unchanged; each field is limited to 8 KiB JSON UTF-8); await sendFollowUpMessage({prompt, title?}) asks the trusted host to confirm and enqueue a message in the source session. Model state changes become dirty and are automatically attached to the next human message for at most the three most recently changed canvases in that session; privateContent never goes to the model. Initialize from widgetState, listen to sideki:statechange for cross-window updates, and save on meaningful interactions, not on load or restoration. Await state writes before requesting a follow-up. Restoring state does not start a turn. Hidden render checks expose the same API but reject state writes and follow-ups; invoke callbacks from user controls and handle rejections. Neither surface exposes Chrome APIs, Node.js, the host page DOM or the user's browser login context. Nested documents (iframe/object/embed), external navigation, form submission, document.write, eval and Function compilation are unavailable. Use #fragment links for in-document navigation. Theme, permissions and resource rules remain the same when switching surfaces; responsive layout may change with viewport size.`
 
 export interface HtmlArtifactOptions {
   network?: boolean
@@ -15,6 +15,7 @@ export function readHtmlPreviewNetwork(params: URLSearchParams): boolean {
 export interface VfsPreviewLink {
   path: string
   network: boolean
+  canvasId?: string
 }
 
 export function parseVfsPreviewLink(href: string): VfsPreviewLink | null {
@@ -25,21 +26,23 @@ export function parseVfsPreviewLink(href: string): VfsPreviewLink | null {
     const path = decodeURIComponent(rawPath)
     if (!/^\/(tmp|page|viz)\/.+/.test(path) || path.split('/').includes('..') || /[?#]/.test(path) || path.includes('\0')) return null
     const params = new URLSearchParams(queryIndex < 0 ? '' : target.slice(queryIndex + 1))
-    return { path, network: readHtmlPreviewNetwork(params) }
+    const canvasId = params.get('canvas')
+    return { path, network: readHtmlPreviewNetwork(params), ...(canvasId ? { canvasId } : {}) }
   } catch {
     return null
   }
 }
 
-export function buildVfsPreviewLink(path: string, network = false): string {
+export function buildVfsPreviewLink(path: string, network = false, canvasId?: string): string {
   const encodedPath = path.split('/').map(segment => encodeURIComponent(segment)).join('/')
-  return `${encodedPath}?network=${network ? '1' : '0'}`
+  return `${encodedPath}?network=${network ? '1' : '0'}${canvasId ? `&canvas=${encodeURIComponent(canvasId)}` : ''}`
 }
 
-export function buildHtmlPreviewUrl(baseUrl: string, sessionId: string, path: string, network?: boolean): string {
+export function buildHtmlPreviewUrl(baseUrl: string, sessionId: string, path: string, network?: boolean, canvasId?: string): string {
   const url = new URL(baseUrl)
   url.searchParams.set('session', sessionId)
   url.searchParams.set('file', path)
+  if (canvasId) url.searchParams.set('canvas', canvasId)
   if (network === undefined) url.searchParams.delete('network')
   else url.searchParams.set('network', network ? '1' : '0')
   return url.toString()

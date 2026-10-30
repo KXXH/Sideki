@@ -87,6 +87,7 @@ async function main() {
         if (current !== generation) return
         frameHost = mountHtmlPreview({
           container: contentEl, html, network, title: filename, getTheme: readHtmlArtifactTheme,
+          canvas: { sessionId, canvasId: params.get('canvas') || `path:${filePath}`, path: filePath, title: filename },
           onError: fail,
           onRendered: () => { if (current === generation && statusEl.dataset.state !== 'error') statusEl.hidden = true },
         })

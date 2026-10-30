@@ -6,6 +6,7 @@ import StreamingMarkdown from '../../src/sidepanel/components/StreamingMarkdown'
 
 vi.mock('@iconify/react', () => ({ Icon: () => null }))
 vi.mock('streamdown', () => ({
+  defaultRehypePlugins: {},
   Streamdown: ({ children, components }: { children: string; components: { a: React.ComponentType<{ href: string; children: string }> } }) => {
     const href = children.match(/\]\(([^)]+)\)/)?.[1] ?? ''
     return React.createElement(components.a, { href, children: '查看' })

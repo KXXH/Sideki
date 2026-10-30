@@ -1,5 +1,6 @@
 import { tool } from 'ai'
 import { z } from 'zod'
+import { toolDescriptionInput } from './tool-description'
 import { sendToolMessage } from './bridge'
 import type { ToolCallCtx } from './bridge'
 
@@ -58,11 +59,12 @@ Task tracking (for multi-step work):
 Unix: grep, sed, awk, jq, head, tail, sort, uniq, wc, find, cat, etc.
 Dirs: /page/ (cleared on nav), /tmp/ (session scratch), /notes/ (session), /viz/ (persistent canvas artifacts), /skills/ (read-only), /memory/ (cross-session, read-only)`,
   inputSchema: z.object({
+    description: toolDescriptionInput,
     command: z.string().describe('Bash command(s) to execute. Supports pipes, redirections, variables, loops.'),
     sessionId: z.string().optional().describe('Session ID for filesystem isolation (auto-filled by the system)'),
   }),
-  execute: async ({ command, sessionId }, { abortSignal }) => {
-    const result = await sendToolMessage('bash', { command, sessionId }, abortSignal, ctx)
+  execute: async ({ command, sessionId }, { abortSignal, toolCallId }) => {
+    const result = await sendToolMessage('bash', { command, sessionId }, abortSignal, ctx, toolCallId)
     const stdout = (result.stdout as string) || ''
     const stderr = (result.stderr as string) || ''
     const exitCode = (result.exitCode as number) ?? 0

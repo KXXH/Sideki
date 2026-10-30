@@ -4,6 +4,8 @@ import type { MonitorEvent, ScheduledTask, TimerWake } from '../shared/scheduled
 import { MONITOR_CODE_LIMIT, MONITOR_EMIT_INTERVAL, MONITOR_MESSAGE_BYTES, MONITOR_WAKE_INTERVAL, serializeMonitorValue } from '../shared/monitor'
 import { operatingTabOf, ownerOf, snapshotTurnTabs, restoreTurnTabs } from './tab-locks'
 import { installPageMonitor, isMonitorDocumentCurrent, stopPageMonitor } from './monitor-page'
+import { approvalManager } from './approval-manager'
+import type { ApprovalReference, ExecutionApproval } from '../shared/approval-types'
 
 const ALARM = 'session-schedules'
 const BOOT_KEY = 'schedule_browser_session'
@@ -60,6 +62,12 @@ async function command(m: Record<string, unknown>) {
   if (!sessionId) throw new Error('缺少会话')
   const tasks = await read()
   const isMonitor = m.type === 'monitor:command'
+  let authorization: ExecutionApproval | undefined
+  if (m.approval) {
+    const args = { ...m }
+    for (const key of ['type', 'sessionId', 'tabId', 'approval']) delete args[key]
+    authorization = await approvalManager.claim(m.approval as ApprovalReference, isMonitor ? 'monitor' : 'schedule', args, m.tabId as number | undefined)
+  }
   if (m.action === 'list') return { success: true, tasks: tasks.filter(t => t.sessionId === sessionId && (!isMonitor || t.kind === 'monitor')).map(publicTask) }
   if (m.action === 'create') {
     const config = await loadConfig()
@@ -89,7 +97,7 @@ async function command(m: Record<string, unknown>) {
       task.maxRuns = maxRuns
       task.tabStack = [tabId]
       task.monitor = { frame: typeof m.frame === 'string' ? m.frame.trim() : undefined, code: m.code, token: crypto.randomUUID(), documentId: '', expiresAt: now + timeout * 1000, listening: true, received: 0, coalesced: 0 }
-      await installPageMonitor(task, session.mode === 'pro')
+      await installPageMonitor(task, session.mode === 'pro', authorization)
     } else {
       const delay = Number(m.delaySeconds)
       const interval = m.intervalSeconds == null ? undefined : Number(m.intervalSeconds)
@@ -127,7 +135,7 @@ async function command(m: Record<string, unknown>) {
       task.monitor.token = crypto.randomUUID()
       task.monitor.listening = true
       task.monitor.errorReported = false
-      await installPageMonitor(task, session?.mode === 'pro')
+      await installPageMonitor(task, session?.mode === 'pro', authorization)
     }
     task.status = 'scheduled'
     task.nextRunAt = task.monitor ? Math.max(Date.now(), task.nextRunAt) : Date.now() + (task.intervalMs ?? 30_000)
