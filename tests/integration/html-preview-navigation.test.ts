@@ -36,23 +36,29 @@ async function navigateSandbox(network: boolean, protectedHost = true) {
     })
     const port = (server.address() as { port: number }).port
     const stdout = await new Promise<string>((resolve, reject) => {
+      // Reason: keep isolated CI Chrome independent of background services, proxy discovery and page-load stalls.
       const child = spawn(chromeBin!, ['--headless', '--no-first-run', '--no-default-browser-check',
+        '--disable-background-networking', '--disable-component-update', '--disable-sync', '--no-proxy-server',
+        '--disable-dev-shm-usage', '--timeout=10000',
         `--user-data-dir=${profile}`, '--dump-dom', '--virtual-time-budget=1500', `http://127.0.0.1:${port}/`])
       let output = ''
+      let stderr = ''
       child.stdout.on('data', chunk => { output += chunk })
-      child.stderr.resume()
-      const timeout = setTimeout(() => { child.kill(); reject(new Error('Chrome navigation check timed out')) }, 20_000)
+      child.stderr.on('data', chunk => { stderr = `${stderr}${chunk}`.slice(-4_000) })
+      const timeout = setTimeout(() => { child.kill('SIGKILL'); reject(new Error(`Chrome navigation check timed out: ${stderr}`)) }, 40_000)
       child.once('error', error => { clearTimeout(timeout); reject(error) })
-      child.once('exit', code => {
+      child.once('exit', (code, signal) => {
         clearTimeout(timeout)
         if (code === 0) resolve(output)
-        else reject(new Error(`Chrome exited with ${code}`))
+        else reject(new Error(`Chrome exited with ${code ?? signal}: ${stderr}`))
       })
     })
     expect(stdout).toContain('>attempted</output>')
     expect(hits).toContain('/sandbox')
     return hits
   } finally {
+    // Reason: a failed browser must not keep the test alive through an unfinished HTTP connection.
+    server.closeAllConnections()
     await new Promise<void>(resolve => server.close(() => resolve()))
     await rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })
   }
@@ -61,8 +67,8 @@ async function navigateSandbox(network: boolean, protectedHost = true) {
 describe.skipIf(!chromeBin)('real Chrome preview navigation boundary', () => {
   it('detects an external request without the host policy (positive control)', async () => {
     expect(await navigateSandbox(false, false)).toContain('/leak')
-  }, 30_000)
+  }, 40_000)
   it.each([false, true])('blocks external navigation with network=%s while executing inline scripts', async network => {
     expect(await navigateSandbox(network)).not.toContain('/leak')
-  }, 30_000)
+  }, 40_000)
 })
